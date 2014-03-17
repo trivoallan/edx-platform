@@ -8,8 +8,11 @@ class @TabsEditingDescriptor
     (Like many CodeMirrors).
     ###
 
-    # hide editor/settings bar
-    @element.closest('.component-editor').find('.component-edit-header').hide()
+    # hide editor/settings bar and update the video's title to match
+    modal = @element.closest('.modal-editor')
+    modal.find('.modal-header').hide()
+    title = modal.find('.modal-window-title').text()
+    modal.find('.component-name').text(title)
 
     @$tabs = $(".tab", @element)
     @$content = $(".component-tab", @element)
@@ -25,7 +28,7 @@ class @TabsEditingDescriptor
     currentTab.trigger("click", [true, @html_id])
 
   onSwitchEditor: (e, firstTime, html_id) =>
-    e.preventDefault();
+    e.preventDefault()
 
     isInactiveClass = TabsEditingDescriptor.isInactiveClass
     $currentTarget = $(e.currentTarget)
@@ -58,6 +61,8 @@ class @TabsEditingDescriptor
       @$content
         .addClass(isInactiveClass)
         .filter(content_id)
+        .removeClass(isInactiveClass)
+        .find('.wrapper-comp-settings')
         .removeClass(isInactiveClass)
 
   save: ->

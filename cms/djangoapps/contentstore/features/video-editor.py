@@ -108,10 +108,10 @@ def set_show_captions(step, setting):
     world.browser.cookies.delete('hide_captions')
 
     world.css_click('a.edit-button')
-    world.wait_for(lambda _driver: world.css_visible('a.save-button'))
-    world.click_link_by_text('Advanced')
+    world.wait_for(lambda _driver: world.css_visible('a.action-save'))
+    world.click_link_by_text('ADVANCED')
     world.browser.select('Transcript Display', setting)
-    world.css_click('a.save-button')
+    world.css_click('a.action-save')
 
 
 @step('when I view the video it (.*) show the captions$')
@@ -156,7 +156,7 @@ def correct_video_settings(_step):
 
 @step('my video display name change is persisted on save$')
 def video_name_persisted(step):
-    world.css_click('a.save-button')
+    world.css_click('a.action-save')
     reload_the_page(step)
     world.wait_for_xmodule()
     world.edit_component()
