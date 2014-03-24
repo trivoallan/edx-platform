@@ -315,6 +315,10 @@ def import_module(
     if 'index_in_children_list' in getattr(module, 'xml_attributes', []):
         del module.xml_attributes['index_in_children_list']
 
+    # Move the module to a new course
+    new_usage_key = module.scope_ids.usage_key.map_into_course(dest_course_id)
+    module.scope_ids = module.scope_ids._replace(usage_key=new_usage_key)
+
     store.update_item(module, '**replace_user**', allow_not_found=allow_not_found)
 
 

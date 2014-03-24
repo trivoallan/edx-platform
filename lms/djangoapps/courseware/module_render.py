@@ -567,7 +567,7 @@ def _invoke_xblock_handler(request, course_id, usage_id, handler, suffix, user):
     Invoke an XBlock handler, either authenticated or not.
 
     """
-    usage_key = UsageKey.from_string(usage_id)
+    usage_key = UsageKey.from_string(unquote_slashes(usage_id))
 
     # Check parameters and fail fast if there's a problem
     if not Location.is_valid(usage_key):
