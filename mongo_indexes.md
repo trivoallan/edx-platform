@@ -18,6 +18,7 @@ location_map:
 ```
 ensureIndex({'org': 1, 'offering': 1})
 ensureIndex({'lower_org': 1, 'lower_offering': 1})
+ensureIndex({'schema': 1})
 ```
 
 fs.files:

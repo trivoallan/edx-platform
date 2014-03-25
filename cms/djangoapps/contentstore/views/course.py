@@ -218,10 +218,13 @@ def _accessible_courses_list_from_groups(request):
             # strip starting text "staff_"
             course_id = user_staff_group_name[6:]
 
-        course_ids.add(course_id.replace('/', '.').lower())
+        course_id = CourseKey.from_string(course_id)
+        if isinstance(CourseKey, CourseLocator):
+            course_id = loc_mapper().translate_locator_to_location(course_id, get_course=True, lower_only=True)
+        course_ids.add(course_id)
 
     for course_id in course_ids:
-        course = modulestore('direct').get_course(CourseKey.from_string(course_id))
+        course = modulestore('direct').get_course(course_id)
         if course is None:
             raise ItemNotFoundError(course_id)
         courses_list.append(course)

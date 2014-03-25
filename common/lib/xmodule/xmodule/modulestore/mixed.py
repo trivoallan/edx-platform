@@ -6,17 +6,17 @@ In this way, courses can be served up both - say - XMLModuleStore or MongoModule
 """
 
 import logging
+from uuid import uuid4
 
 from . import ModuleStoreWriteBase
 from xmodule.modulestore.django import create_modulestore_instance, loc_mapper
-from xmodule.modulestore import Location, SPLIT_MONGO_MODULESTORE_TYPE, XML_MODULESTORE_TYPE
+from xmodule.modulestore import Location, XML_MODULESTORE_TYPE
 from xmodule.modulestore.locator import CourseLocator, Locator
-from xmodule.modulestore.exceptions import ItemNotFoundError, InvalidLocationError
+from xmodule.modulestore.exceptions import ItemNotFoundError
 from xmodule.modulestore.keys import CourseKey
-from uuid import uuid4
 from xmodule.modulestore.mongo.base import MongoModuleStore
 from xmodule.modulestore.split_mongo.split import SplitMongoModuleStore
-from xmodule.exceptions import UndefinedContext
+from xmodule.modulestore.locations import SlashSeparatedCourseKey
 
 log = logging.getLogger(__name__)
 
@@ -240,9 +240,8 @@ class MixedModuleStore(ModuleStoreWriteBase):
             if isinstance(course_or_parent_loc, basestring):
                 parent_loc = None
                 if location is None:
-                    loc_dict = Location.parse_course_id(course_id)
-                    loc_dict['name'] = block_id
-                    location = Location(category=category, **loc_dict)
+                    course_key = SlashSeparatedCourseKey.from_string(course_id)
+                    location = course_key.make_usage_key(category=category, block_id=block_id)
             else:
                 parent_loc = course_or_parent_loc
                 # must have a legitimate location, compute if appropriate
@@ -259,7 +258,7 @@ class MixedModuleStore(ModuleStoreWriteBase):
             if isinstance(course_or_parent_loc, basestring):  # course_id
                 course_or_parent_loc = loc_mapper().translate_location_to_course_locator(
                     # hardcode draft version until we figure out how we're handling branches from app
-                    course_or_parent_loc, None, published=False
+                    SlashSeparatedCourseKey.from_string(course_or_parent_loc), published=False
                 )
             elif not isinstance(course_or_parent_loc, CourseLocator):
                 raise ValueError(u"Cannot create a child of {} in split. Wrong repr.".format(course_or_parent_loc))

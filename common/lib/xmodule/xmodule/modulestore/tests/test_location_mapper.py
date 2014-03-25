@@ -75,7 +75,7 @@ class TestLocationMapper(LocMapperSetupSansDjango):
         self.assertEqual(entry['prod_branch'], 'live')
         self.assertEqual(entry['block_map'], block_map)
 
-    def translate_n_check(self, location, old_style_course_id, org, offering, block_id, branch, add_entry=False):
+    def translate_n_check(self, location, org, offering, block_id, branch, add_entry=False):
         """
         Request translation, check org, offering, block_id, and branch
         """
@@ -90,8 +90,7 @@ class TestLocationMapper(LocMapperSetupSansDjango):
         self.assertEqual(prob_locator.branch, branch)
 
         course_locator = loc_mapper().translate_location_to_course_locator(
-            old_style_course_id,
-            location,
+            location.course_key,
             published=(branch == 'published'),
         )
         self.assertEqual(course_locator.offering, org)
@@ -105,7 +104,7 @@ class TestLocationMapper(LocMapperSetupSansDjango):
         org = 'foo_org'
         course = 'bar_course'
         run = 'baz_run'
-        old_style_course_id = '{}/{}/{}'.format(org, course, run)
+        slash_course_key = SlashSeparatedCourseKey(org, course, run)
         with self.assertRaises(ItemNotFoundError):
             _ = loc_mapper().translate_location(
                 Location(org, course, run, 'problem', 'abc123'),
@@ -120,13 +119,13 @@ class TestLocationMapper(LocMapperSetupSansDjango):
             'ghi789': {'problem': 'problem7'},
         }
         loc_mapper().create_map_entry(
-            SlashSeparatedCourseKey.from_string(old_style_course_id),
+            slash_course_key,
             new_style_org, new_style_offering,
             block_map=block_map
         )
         test_problem_locn = Location(org, course, run, 'problem', 'abc123')
 
-        self.translate_n_check(test_problem_locn, None, new_style_org, new_style_offering, 'problem2', 'published')
+        self.translate_n_check(test_problem_locn, new_style_org, new_style_offering, 'problem2', 'published')
         # look for non-existent problem
         with self.assertRaises(ItemNotFoundError):
             loc_mapper().translate_location(
@@ -136,12 +135,12 @@ class TestLocationMapper(LocMapperSetupSansDjango):
         test_no_cat_locn = test_problem_locn.replace(category=None)
         with self.assertRaises(InvalidLocationError):
             loc_mapper().translate_location(
-                old_style_course_id, test_no_cat_locn, False, False
+                slash_course_key, test_no_cat_locn, False, False
             )
         test_no_cat_locn = test_no_cat_locn.replace(name='def456')
 
         self.translate_n_check(
-            test_no_cat_locn, old_style_course_id, new_style_org, new_style_offering, 'problem4', 'published'
+            test_no_cat_locn, new_style_org, new_style_offering, 'problem4', 'published'
         )
 
         # add a distractor course (note that abc123 has a different translation in this one)
@@ -161,11 +160,11 @@ class TestLocationMapper(LocMapperSetupSansDjango):
         )
         # test that old translation still works
         self.translate_n_check(
-            test_problem_locn, old_style_course_id, old_style_course_id, new_style_org, 'problem2', 'published'
+            test_problem_locn, new_style_org, new_style_offering, 'problem2', 'published'
         )
         # and new returns new id
         self.translate_n_check(
-            test_problem_locn.replace(run=run), test_delta_old_id, test_delta_new_org, test_delta_new_offering,
+            test_problem_locn.replace(run=run), test_delta_new_org, test_delta_new_offering,
             'problem3', 'published'
         )
 
@@ -177,17 +176,14 @@ class TestLocationMapper(LocMapperSetupSansDjango):
         org = 'foo_org'
         course = 'bar_course'
         run = 'baz_run'
-        old_style_course_id = '{}/{}/{}'.format(org, course, run)
         problem_name = 'abc123abc123abc123abc123abc123f9'
         location = Location(org, course, run, 'problem', problem_name)
         new_offering = '{}.{}'.format(course, 'baz_run')
-        self.translate_n_check(location, old_style_course_id, org, new_offering, 'problemabc', 'published', True)
-        # look for w/ only the Location (works b/c there's only one possible course match): causes cache
-        self.translate_n_check(location, None, org, new_offering, 'problemabc', 'published', True)
+        self.translate_n_check(location, org, new_offering, 'problemabc', 'published', True)
 
         # create an entry w/o a guid name
         other_location = Location(org, course, run, 'chapter', 'intro')
-        self.translate_n_check(other_location, old_style_course_id, org, new_offering, 'intro', 'published', True)
+        self.translate_n_check(other_location, org, new_offering, 'intro', 'published', True)
 
         # add a distractor course
         delta_new_org = '{}.geek_dept'.format(org)
@@ -198,7 +194,7 @@ class TestLocationMapper(LocMapperSetupSansDjango):
             delta_new_org, delta_new_offering,
             block_map={problem_name: {'problem': 'problem3'}}
         )
-        self.translate_n_check(location, old_style_course_id, org, new_offering, 'problemabc', 'published', True)
+        self.translate_n_check(location, org, new_offering, 'problemabc', 'published', True)
 
         # add a new one to both courses (ensure name doesn't have same beginning)
         new_prob_name = uuid.uuid4().hex
@@ -206,9 +202,9 @@ class TestLocationMapper(LocMapperSetupSansDjango):
             new_prob_name = uuid.uuid4().hex
         new_prob_locn = location.replace(name=new_prob_name)
         new_usage_id = 'problem{}'.format(new_prob_name[:3])
-        self.translate_n_check(new_prob_locn, old_style_course_id, org, new_offering, new_usage_id, 'published', True)
+        self.translate_n_check(new_prob_locn, org, new_offering, new_usage_id, 'published', True)
         self.translate_n_check(
-            new_prob_locn, delta_course_locn, delta_new_org, delta_new_offering, new_usage_id, 'published', True
+            new_prob_locn, delta_new_org, delta_new_offering, new_usage_id, 'published', True
         )
 
     def test_translate_locator(self):
