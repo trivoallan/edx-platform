@@ -13,7 +13,6 @@ from bson.errors import InvalidId
 
 from opaque_keys import OpaqueKey, InvalidKeyError
 
-from xmodule.modulestore.exceptions import InsufficientSpecificationError
 from xmodule.modulestore.keys import CourseKey, UsageKey
 
 from xmodule.modulestore.parsers import (
@@ -22,7 +21,7 @@ from xmodule.modulestore.parsers import (
     BRANCH_PREFIX,
     BLOCK_PREFIX,
     VERSION_PREFIX
-)
+, ALLOWED_ID_CHARS, ALLOWED_ID_RE)
 
 log = logging.getLogger(__name__)
 
@@ -50,10 +49,10 @@ class Locator(OpaqueKey):
     def url(self):
         """
         Return a string containing the URL for this location. Raises
-        InsufficientSpecificationError if the instance doesn't have a
+        InvalidKeyError if the instance doesn't have a
         complete enough specification to generate a url
         """
-        raise InsufficientSpecificationError()
+        raise InvalidKeyError()
 
     def __str__(self):
         '''
@@ -65,30 +64,10 @@ class Locator(OpaqueKey):
     def version(self):
         """
         Returns the ObjectId referencing this specific location.
-        Raises InsufficientSpecificationError if the instance
+        Raises InvalidKeyError if the instance
         doesn't have a complete enough specification.
         """
-        raise InsufficientSpecificationError()
-
-    URL_TAG_RE = re.compile(r'^(\w+)://')
-    @staticmethod
-    def parse_url(url):
-        """
-        Parse the url into one of the Locator types (must have a tag indicating type)
-        Return the new instance. Supports i4x, cvx, edx, defx
-
-        :param url: the url to parse
-        """
-        # TODO remove in favor of the Key.from_string method
-        parsed = Locator.URL_TAG_RE.match(url)
-        if parsed is None:
-            raise ValueError(parsed)
-        parsed = parsed.group(1)
-        if parsed == 'edx':
-            return BlockUsageLocator.from_string(url)
-        elif parsed == 'defx':
-            return DefinitionLocator.from_string(url)
-        return None
+        raise InvalidKeyError()
 
     @classmethod
     def as_object_id(cls, value):
@@ -117,12 +96,12 @@ class BlockLocatorBase(Locator):
         """
         Return a string containing the URL for this location.
         """
-        return u'edx://' + self._to_string()
+        return self.NAMESPACE_SEPARATOR.join([self.CANONICAL_NAMESPACE, self._to_string()])
 
     @classmethod
     def _parse_url(cls, url):
         """
-        url must be a string beginning with 'edx://' and containing
+        url must be a string beginning with 'edx:' and containing
         either a valid version_guid or org & offering (with optional branch), or both.
         """
         if not isinstance(url, basestring):
@@ -130,7 +109,7 @@ class BlockLocatorBase(Locator):
 
         parse = parse_url(url, tag_optional=True)
         if not parse:
-            raise ValueError('Could not parse "%s" as a url' % url)
+            raise InvalidKeyError(cls, url)
 
         if parse['version_guid']:
             parse['version_guid'] = cls.as_object_id(parse['version_guid'])
@@ -145,19 +124,18 @@ class BlockLocatorBase(Locator):
             return None
 
 
-
 class CourseLocator(BlockLocatorBase, CourseKey):
     """
     Examples of valid CourseLocator specifications:
      CourseLocator(version_guid=ObjectId('519665f6223ebd6980884f2b'))
      CourseLocator(org='mit.eecs', offering='6.002x')
      CourseLocator(org='mit.eecs', offering='6002x', branch = 'published')
-     CourseLocator.from_string('edx://version/519665f6223ebd6980884f2b')
+     CourseLocator.from_string('edx:version/519665f6223ebd6980884f2b')
      CourseLocator.from_string('version/519665f6223ebd6980884f2b')
-     CourseLocator.from_string('edx://mit.eecs+6002x')
+     CourseLocator.from_string('edx:mit.eecs+6002x')
      CourseLocator.from_string('mit.eecs+6002x')
-     CourseLocator.from_string('edx://mit.eecs+6002x/branch/published')
-     CourseLocator.from_string('edx://mit.eecs+6002x/branch/published/version/519665f6223ebd6980884f2b')
+     CourseLocator.from_string('edx:mit.eecs+6002x/branch/published')
+     CourseLocator.from_string('edx:mit.eecs+6002x/branch/published/version/519665f6223ebd6980884f2b')
      CourseLocator.from_string('mit.eecs+6002x/branch/published/version/519665f6223ebd6980884f2b')
 
     Should have at least a specific org & offering (id for the course as if it were a project w/
@@ -184,6 +162,9 @@ class CourseLocator(BlockLocatorBase, CourseKey):
         """
         if version_guid:
             version_guid = self.as_object_id(version_guid)
+
+        if not all(field is None or ALLOWED_ID_RE.match(field) for field in [org, offering, branch]):
+            raise InvalidKeyError(self.__class__, [org, offering, branch])
 
         super(CourseLocator, self).__init__(
             org=org,
@@ -363,9 +344,9 @@ class BlockUsageLocator(BlockLocatorBase, UsageKey):  # TODO implement UsageKey 
         """
         course_key = CourseLocator.from_string(serialized)
         parsed_parts = parse_url(serialized, tag_optional=True)
-        block_id = parsed_parts.get('block')
+        block_id = parsed_parts.get('block_id')
         if block_id is None:
-            raise InvalidKeyError(cls, "Missing block id: {}".format(serialized))
+            raise InvalidKeyError(cls, serialized)
         return cls(course_key, block_id)
 
     def version_agnostic(self):
@@ -393,14 +374,14 @@ class BlockUsageLocator(BlockLocatorBase, UsageKey):  # TODO implement UsageKey 
             block_id=self.block_id
         )
 
-    @staticmethod
-    def _parse_block_ref(block_ref):
+    @classmethod
+    def _parse_block_ref(cls, block_ref):
         if isinstance(block_ref, LocalId):
             return block_ref
         else:
             parse = parse_block_ref(block_ref)
             if not parse:
-                raise ValueError('Could not parse "%s" as a block_ref' % block_ref)
+                raise InvalidKeyError(cls, block_ref)
             return parse.get('block_id')
 
     @property
@@ -478,7 +459,7 @@ class DefinitionLocator(Locator):
     CANONICAL_NAMESPACE = 'defx'
     KEY_FIELDS = ('definition_id',)
 
-    URL_RE = re.compile(r'^defx://' + VERSION_PREFIX + '([^/]+)$', re.IGNORECASE)
+    URL_RE = re.compile(r'^defx:' + VERSION_PREFIX + '([^/]+)$', re.IGNORECASE)
     def __init__(self, definition_id):
         if isinstance(definition_id, LocalId):
             super(DefinitionLocator, self).__init__(definition_id)
@@ -501,9 +482,9 @@ class DefinitionLocator(Locator):
     def url(self):
         """
         Return a string containing the URL for this location.
-        url(self) returns something like this: 'defx://version/519665f6223ebd6980884f2b'
+        url(self) returns something like this: 'defx:version/519665f6223ebd6980884f2b'
         """
-        return u'defx://' + self._to_string()
+        return u'defx:' + self._to_string()
 
     def version(self):
         """
