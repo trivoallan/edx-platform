@@ -11,7 +11,7 @@ from uuid import uuid4
 from . import ModuleStoreWriteBase
 from xmodule.modulestore.django import create_modulestore_instance, loc_mapper
 from xmodule.modulestore import Location, XML_MODULESTORE_TYPE
-from xmodule.modulestore.locator import CourseLocator, Locator
+from xmodule.modulestore.locator import CourseLocator, Locator, BlockUsageLocator
 from xmodule.modulestore.exceptions import ItemNotFoundError
 from xmodule.modulestore.keys import CourseKey
 from xmodule.modulestore.mongo.base import MongoModuleStore
@@ -218,7 +218,7 @@ class MixedModuleStore(ModuleStoreWriteBase):
         if not hasattr(store, 'create_course'):
             raise NotImplementedError(u"Cannot create a course on store %s" % store_name)
 
-        return store.create_course(org, offering, user_id, fields, store_name=store_name, **kwargs)
+        return store.create_course(org, offering, user_id, fields, **kwargs)
 
     def create_item(self, course_or_parent_loc, category, user_id=None, **kwargs):
         """
@@ -260,7 +260,7 @@ class MixedModuleStore(ModuleStoreWriteBase):
                     # hardcode draft version until we figure out how we're handling branches from app
                     SlashSeparatedCourseKey.from_string(course_or_parent_loc), published=False
                 )
-            elif not isinstance(course_or_parent_loc, CourseLocator):
+            elif not isinstance(course_or_parent_loc, (CourseLocator, BlockUsageLocator)):
                 raise ValueError(u"Cannot create a child of {} in split. Wrong repr.".format(course_or_parent_loc))
 
             # split handles all the fields in one dict not separated by scope

@@ -688,7 +688,7 @@ class MongoModuleStore(ModuleStoreWriteBase):
                 ]))
 
         location = course_id.make_usage_key('course', course_id.run)
-        course = self.create_and_save_xmodule(location, definition_data, metadata, runtime, fields)
+        course = self.create_and_save_xmodule(location, fields=fields, **kwargs)
 
         # clone a default 'about' overview module as well
         about_location = location.replace(
@@ -749,8 +749,9 @@ class MongoModuleStore(ModuleStoreWriteBase):
             ScopeIds(None, location.category, location, location),
             dbmodel,
         )
-        for key, value in fields.iteritems():
-            setattr(xmodule, key, value)
+        if fields is not None:
+            for key, value in fields.iteritems():
+                setattr(xmodule, key, value)
         # decache any pending field settings from init
         xmodule.save()
         return xmodule

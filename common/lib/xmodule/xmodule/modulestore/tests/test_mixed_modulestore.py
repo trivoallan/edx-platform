@@ -15,6 +15,7 @@ from xmodule.modulestore.tests.test_location_mapper import LocMapperSetupSansDja
 # Mixed modulestore depends on django, so we'll manually configure some django settings
 # before importing the module
 from django.conf import settings
+from xmodule.modulestore.locations import SlashSeparatedCourseKey
 if not settings.configured:
     settings.configure()
 from xmodule.modulestore.mixed import MixedModuleStore
@@ -115,11 +116,15 @@ class TestMixedModuleStore(LocMapperSetupSansDjango):
         self.course_locations = []
 
     # pylint: disable=invalid-name
-    def _create_course(self, default, course_id):
+    def _create_course(self, default, course_key):
         """
         Create a course w/ one item in the persistence store using the given course & item location.
         """
-        course = self.store.create_course(course_id, store_name=default)
+        if default == 'split':
+            offering = course_key.offering.replace('/', '.')
+        else:
+            offering = course_key.offering
+        course = self.store.create_course(course_key.org, offering, store_name=default)
         category = self.import_chapter_location.category
         block_id = self.import_chapter_location.name
         chapter = self.store.create_item(
@@ -130,7 +135,7 @@ class TestMixedModuleStore(LocMapperSetupSansDjango):
             self.course_locations[self.MONGO_COURSEID] = course.location.version_agnostic()
             self.import_chapter_location = chapter.location.version_agnostic()
         else:
-            self.assertEqual(course.id, course_id)
+            self.assertEqual(course.id, course_key)
             self.assertEqual(chapter.location, self.import_chapter_location)
 
     def initdb(self, default):
@@ -142,11 +147,17 @@ class TestMixedModuleStore(LocMapperSetupSansDjango):
         self.store = MixedModuleStore(**self.options)
         self.addCleanup(self.store.close_all_connections)
 
+        # convert to CourseKeys
         self.course_locations = {
-            course_id: course_id
+            course_id: SlashSeparatedCourseKey.from_string(course_id)
             for course_id in [self.MONGO_COURSEID, self.XML_COURSEID1, self.XML_COURSEID2]
         }
-        self.fake_location = Location('foo', 'bar', 'vertical', 'baz')
+        # and then to the root UsageKey
+        self.course_locations = {
+            course_id: course_key.make_usage_key('course', course_key.run)
+            for course_id, course_key in self.course_locations.iteritems()
+        }
+        self.fake_location = Location('foo', 'bar', 'slowly', 'vertical', 'baz')
         self.import_chapter_location = self.course_locations[self.MONGO_COURSEID].replace(
             category='chapter', name='Overview'
         )
@@ -157,7 +168,7 @@ class TestMixedModuleStore(LocMapperSetupSansDjango):
         if default == 'split':
             self.fake_location = loc_mapper().translate_location(self.fake_location)
 
-        self._create_course(default, self.MONGO_COURSEID)
+        self._create_course(default, self.course_locations[self.MONGO_COURSEID].course_key)
 
     @ddt.data('direct', 'split')
     def test_get_modulestore_type(self, default_ms):
