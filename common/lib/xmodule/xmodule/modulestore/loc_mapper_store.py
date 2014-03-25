@@ -9,7 +9,7 @@ import urllib
 
 from xmodule.modulestore.exceptions import InvalidLocationError, ItemNotFoundError
 from xmodule.modulestore.locator import BlockUsageLocator, CourseLocator
-from xmodule.modulestore.locations import Location, SlashSeparatedCourseKey
+from xmodule.modulestore.locations import SlashSeparatedCourseKey
 from xmodule.modulestore.keys import UsageKey
 
 
@@ -135,7 +135,6 @@ class LocMapperStore(object):
             return cached_value
 
         entry = self.location_map.find_one(course_son)
-        entry = self._migrate_if_necessary([entry])[0]
         if entry is None:
             if add_entry_if_missing:
                 # create a new map
@@ -143,6 +142,8 @@ class LocMapperStore(object):
                 entry = self.location_map.find_one(course_son)
             else:
                 raise ItemNotFoundError(location)
+        else:
+            entry = self._migrate_if_necessary([entry])[0]
 
         block_id = entry['block_map'].get(self.encode_key_for_mongo(location.name))
         if block_id is None:
@@ -285,8 +286,9 @@ class LocMapperStore(object):
                 self._cache_location_map_entry(location, published_locator, draft_locator)
 
                 if block_id == locator.block_id:
-                    result = location
-        return result
+                    return location
+
+        return None
 
     def translate_location_to_course_locator(self, course_key, published=True):
         """
@@ -348,7 +350,7 @@ class LocMapperStore(object):
         """
         Generate a Location course_id for the given entry's id.
         """
-        return SlashSeparatedCourseKey(**entry_id['_id'])
+        return SlashSeparatedCourseKey(entry_id['org'], entry_id['course'], entry_id['name'])
 
     def _construct_course_son(self, course_id):
         """
@@ -475,7 +477,7 @@ class LocMapperStore(object):
         """
         entries = [
             # CODE REVIEW: should I do this recursively from self_SCHEMA_VERSION?
-            self._migrate[entry.get('schema', 0)](entry)
+            self._migrate[entry.get('schema', 0)](self, entry)
             for entry in entries
         ]
         return entries
@@ -527,3 +529,5 @@ class LocMapperStore(object):
         entry['offering'] = old_course_id.offering
         entry['lower_offering'] = old_course_id.offering.lower()
         self._migrate_1(entry, True)
+
+    _migrate = [_migrate_0, _migrate_1]

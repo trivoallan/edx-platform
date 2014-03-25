@@ -9,6 +9,7 @@ from xmodule.modulestore.exceptions import ItemNotFoundError, InvalidLocationErr
 from xmodule.modulestore.loc_mapper_store import LocMapperStore
 from mock import Mock
 from xmodule.modulestore.locations import SlashSeparatedCourseKey
+import bson.son
 
 
 class LocMapperSetupSansDjango(unittest.TestCase):
@@ -40,13 +41,23 @@ class TestLocationMapper(LocMapperSetupSansDjango):
     Test the location to locator mapper
     """
     def test_create_map(self):
+        def _construct_course_son(org, course, run):
+            """
+            Make a lookup son
+            """
+            return bson.son.SON([
+                ('org', org),
+                ('course', course),
+                ('name', run)
+            ])
+
         org = 'foo_org'
         course = 'bar_course'
         run = 'baz_run'
         loc_mapper().create_map_entry(SlashSeparatedCourseKey(org, course, run))
         # pylint: disable=protected-access
         entry = loc_mapper().location_map.find_one({
-            '_id': loc_mapper()._construct_location_son(org, course, run)
+            '_id': _construct_course_son(org, course, run)
         })
         self.assertIsNotNone(entry, "Didn't find entry")
         self.assertEqual(entry['org'], org)
@@ -59,14 +70,14 @@ class TestLocationMapper(LocMapperSetupSansDjango):
         # oldname: {category: newname}
         block_map = {'abc123': {'problem': 'problem2'}}
         loc_mapper().create_map_entry(
-            Location(org, course, run, 'problem', 'abc123', 'draft'),
+            SlashSeparatedCourseKey(org, course, run),
             'foo_org.geek_dept',
             'quux_course.baz_run',
             'wip',
             'live',
             block_map)
         entry = loc_mapper().location_map.find_one({
-            '_id': loc_mapper()._construct_location_son(org, course, run)
+            '_id': _construct_course_son(org, course, run)
         })
         self.assertIsNotNone(entry, "Didn't find entry")
         self.assertEqual(entry['org'], 'foo_org.geek_dept')
@@ -93,7 +104,8 @@ class TestLocationMapper(LocMapperSetupSansDjango):
             location.course_key,
             published=(branch == 'published'),
         )
-        self.assertEqual(course_locator.offering, org)
+        self.assertEqual(course_locator.org, org)
+        self.assertEqual(course_locator.offering, offering)
         self.assertEqual(course_locator.branch, branch)
 
     def test_translate_location_read_only(self):
@@ -135,7 +147,7 @@ class TestLocationMapper(LocMapperSetupSansDjango):
         test_no_cat_locn = test_problem_locn.replace(category=None)
         with self.assertRaises(InvalidLocationError):
             loc_mapper().translate_location(
-                slash_course_key, test_no_cat_locn, False, False
+                slash_course_key.make_usage_key(None, 'abc123'), test_no_cat_locn, False, False
             )
         test_no_cat_locn = test_no_cat_locn.replace(name='def456')
 
@@ -187,7 +199,8 @@ class TestLocationMapper(LocMapperSetupSansDjango):
 
         # add a distractor course
         delta_new_org = '{}.geek_dept'.format(org)
-        delta_new_offering = '{}.{}'.format(course, 'delta_run')
+        run = 'delta_run'
+        delta_new_offering = '{}.{}'.format(course, run)
         delta_course_locn = SlashSeparatedCourseKey(org, course, run)
         loc_mapper().create_map_entry(
             delta_course_locn,
@@ -203,6 +216,7 @@ class TestLocationMapper(LocMapperSetupSansDjango):
         new_prob_locn = location.replace(name=new_prob_name)
         new_usage_id = 'problem{}'.format(new_prob_name[:3])
         self.translate_n_check(new_prob_locn, org, new_offering, new_usage_id, 'published', True)
+        new_prob_locn = new_prob_locn.replace(run=run)
         self.translate_n_check(
             new_prob_locn, delta_new_org, delta_new_offering, new_usage_id, 'published', True
         )
@@ -240,10 +254,10 @@ class TestLocationMapper(LocMapperSetupSansDjango):
         # only one course matches
         prob_location = loc_mapper().translate_locator_to_location(prob_locator)
         # default branch
-        self.assertEqual(prob_location, Location('i4x', org, course, 'problem', 'abc123', None))
+        self.assertEqual(prob_location, Location(org, course, run, 'problem', 'abc123', None))
         # test get_course keyword
         prob_location = loc_mapper().translate_locator_to_location(prob_locator, get_course=True)
-        self.assertEqual(prob_location, Location('i4x', org, course, 'course', 'baz_run', None))
+        self.assertEqual(prob_location, SlashSeparatedCourseKey(org, course, run))
         # explicit branch
         prob_locator = BlockUsageLocator(
             prob_course_key.for_branch('draft'), block_id=prob_locator.block_id
@@ -263,7 +277,7 @@ class TestLocationMapper(LocMapperSetupSansDjango):
         chap_location = loc_mapper().translate_locator_to_location(chap_locator)
         self.assertEqual(chap_location, Location(org, course, run, 'chapter', '48f23a10395384929234'))
         # explicit branch
-        chap_locator.branch = 'draft'
+        chap_locator = chap_locator.for_branch('draft')
         chap_location = loc_mapper().translate_locator_to_location(chap_locator)
         self.assertEqual(chap_location, Location(org, course, run, 'chapter', '48f23a10395384929234'))
         chap_locator = BlockUsageLocator(

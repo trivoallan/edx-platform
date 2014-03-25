@@ -374,6 +374,15 @@ class BlockUsageLocator(BlockLocatorBase, UsageKey):  # TODO implement UsageKey 
             block_id=self.block_id
         )
 
+    def for_branch(self, branch):
+        """
+        Return a UsageLocator for the same block in a different branch of the course.
+        """
+        return BlockUsageLocator(
+            self.course_key.for_branch(branch),
+            block_id=self.block_id
+        )
+
     @classmethod
     def _parse_block_ref(cls, block_ref):
         if isinstance(block_ref, LocalId):
