@@ -797,7 +797,7 @@ class MongoModuleStore(ModuleStoreWriteBase):
         Also we have to assert that this module maps to only one course item - it'll throw an
         assert if not
         '''
-        self.get_course(location.course_key, depth)
+        return self.get_course(location.course_key, depth)
 
     def _update_single_item(self, location, update):
         """
