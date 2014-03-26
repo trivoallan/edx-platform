@@ -12,16 +12,14 @@ from cStringIO import StringIO
 from fs.osfs import OSFS
 from importlib import import_module
 from lxml import etree
-from opaque_keys import InvalidKeyError
 from path import path
 
 from xmodule.error_module import ErrorDescriptor
 from xmodule.errortracker import make_error_tracker, exc_info_to_str
-from xmodule.course_module import CourseDescriptor
 from xmodule.mako_module import MakoDescriptorSystem
 from xmodule.x_module import XMLParsingSystem, policy_key
 from xmodule.modulestore.xml_exporter import DEFAULT_CONTENT_FIELDS
-from xmodule.modulestore.keys import CourseKey, UsageKey
+from xmodule.modulestore.keys import CourseKey
 from xmodule.modulestore.locations import SlashSeparatedCourseKey
 
 from xblock.fields import ScopeIds
@@ -32,7 +30,6 @@ from . import ModuleStoreReadBase, Location, XML_MODULESTORE_TYPE
 
 from .exceptions import ItemNotFoundError
 from .inheritance import compute_inherited_metadata, inheriting_field_data
-import collections
 
 edx_xml_parser = etree.XMLParser(dtd_validation=False, load_dtd=False,
                                  remove_comments=True, remove_blank_text=True)
@@ -725,7 +722,7 @@ class XMLModuleStore(ModuleStoreReadBase):
 
         for mod_loc, module in self.modules[course_id].iteritems():
             if _block_matches_all(mod_loc, module):
-                items.append(mod_loc)
+                items.append(module)
 
         return items
 

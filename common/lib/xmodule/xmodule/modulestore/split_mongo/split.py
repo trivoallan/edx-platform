@@ -301,16 +301,17 @@ class SplitMongoModuleStore(ModuleStoreWriteBase):
         for structure in matching:
             version_guid = structure['versions'][branch]
             version_guids.append(version_guid)
-            id_version_map[version_guid] = structure['_id']
+            id_version_map[version_guid] = structure
 
         course_entries = self.db_connection.find_matching_structures({'_id': {'$in': version_guids}})
 
         # get the block for the course element (s/b the root)
         result = []
         for entry in course_entries:
+            course_info = id_version_map[entry['_id']]
             envelope = {
-                'org': id_version_map[entry['org']],
-                'offering': id_version_map[entry['offering']],
+                'org': course_info['org'],
+                'offering': course_info['offering'],
                 'branch': branch,
                 'structure': entry,
             }
@@ -418,12 +419,12 @@ class SplitMongoModuleStore(ModuleStoreWriteBase):
             # odd case where we don't search just confirm
             block_id = kwargs.pop('name')
             block = course['structure']['blocks'].get(block_id)
-            if self._block_matches_all(block):
+            if _block_matches_all(block):
                 return self._load_items(course, [block_id], lazy=True)
             else:
                 return []
         for block_id, value in course['structure']['blocks'].iteritems():
-            if self._block_matches_all(value):
+            if _block_matches_all(value):
                 items.append(block_id)
 
         if len(items) > 0:

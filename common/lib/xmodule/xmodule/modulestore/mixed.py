@@ -241,7 +241,7 @@ class MixedModuleStore(ModuleStoreWriteBase):
                 parent_loc = None
                 if location is None:
                     course_key = SlashSeparatedCourseKey.from_string(course_id)
-                    location = course_key.make_usage_key(category=category, block_id=block_id)
+                    location = course_key.make_usage_key(category, block_id)
             else:
                 parent_loc = course_or_parent_loc
                 # must have a legitimate location, compute if appropriate

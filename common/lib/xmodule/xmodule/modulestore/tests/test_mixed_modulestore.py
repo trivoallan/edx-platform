@@ -111,6 +111,7 @@ class TestMixedModuleStore(LocMapperSetupSansDjango):
         patcher.start()
         self.addCleanup(patcher.stop)
         self.addTypeEqualityFunc(BlockUsageLocator, '_compareIgnoreVersion')
+        self.addTypeEqualityFunc(CourseLocator, '_compareIgnoreVersion')
         # define attrs which get set in initdb to quell pylint
         self.import_chapter_location = self.store = self.fake_location = self.xml_chapter_location = None
         self.course_locations = []
@@ -131,7 +132,7 @@ class TestMixedModuleStore(LocMapperSetupSansDjango):
             # don't use course_location as it may not be the repr
             course.location, category, location=self.import_chapter_location, block_id=block_id
         )
-        if isinstance(course.location, CourseLocator):
+        if isinstance(course.id, CourseLocator):
             self.course_locations[self.MONGO_COURSEID] = course.location.version_agnostic()
             self.import_chapter_location = chapter.location.version_agnostic()
         else:
@@ -186,20 +187,19 @@ class TestMixedModuleStore(LocMapperSetupSansDjango):
     @ddt.data('direct', 'split')
     def test_has_item(self, default_ms):
         self.initdb(default_ms)
-        for course_id, course_locn in self.course_locations.iteritems():
-            self.assertTrue(self.store.has_item(course_id, course_locn))
+        for course_locn in self.course_locations.itervalues():
+            self.assertTrue(self.store.has_item(course_locn))
 
         # try negative cases
         self.assertFalse(self.store.has_item(
-            self.XML_COURSEID1,
             self.course_locations[self.XML_COURSEID1].replace(name='not_findable', category='problem')
         ))
-        self.assertFalse(self.store.has_item(self.MONGO_COURSEID, self.fake_location))
+        self.assertFalse(self.store.has_item(self.fake_location))
 
     @ddt.data('direct', 'split')
     def test_get_item(self, default_ms):
         self.initdb(default_ms)
-        for course_id, course_locn in self.course_locations.iteritems():
+        for course_locn in self.course_locations.itervalues():
             self.assertIsNotNone(self.store.get_item(course_locn))
 
         # try negative cases
@@ -213,7 +213,7 @@ class TestMixedModuleStore(LocMapperSetupSansDjango):
     @ddt.data('direct', 'split')
     def test_get_items(self, default_ms):
         self.initdb(default_ms)
-        for course_id, course_locn in self.course_locations.iteritems():
+        for course_locn in self.course_locations.itervalues():
             if hasattr(course_locn, 'course_key'):
                 locn = course_locn.course_key
             else:
@@ -229,19 +229,19 @@ class TestMixedModuleStore(LocMapperSetupSansDjango):
         Update should fail for r/o dbs and succeed for r/w ones
         """
         self.initdb(default_ms)
-        course = self.store.get_course(self.XML_COURSEID1)
+        course = self.store.get_course(self.course_locations[self.XML_COURSEID1].course_key)
         # if following raised, then the test is really a noop, change it
         self.assertFalse(course.show_calculator, "Default changed making test meaningless")
         course.show_calculator = True
         with self.assertRaises(NotImplementedError):
             self.store.update_item(course, None)
         # now do it for a r/w db
-        course = self.store.get_course(self.MONGO_COURSEID)
+        course = self.store.get_course(self.course_locations[self.MONGO_COURSEID].course_key)
         # if following raised, then the test is really a noop, change it
         self.assertFalse(course.show_calculator, "Default changed making test meaningless")
         course.show_calculator = True
         self.store.update_item(course, None)
-        course = self.store.get_course(self.MONGO_COURSEID)
+        course = self.store.get_course(self.course_locations[self.MONGO_COURSEID].course_key)
         self.assertTrue(course.show_calculator)
 
     @ddt.data('direct', 'split')
@@ -281,8 +281,8 @@ class TestMixedModuleStore(LocMapperSetupSansDjango):
         courses = self.store.modulestores['xml'].get_courses()
         self.assertEqual(len(courses), 2)
         course_ids = [course.id for course in courses]
-        self.assertIn(self.XML_COURSEID1, course_ids)
-        self.assertIn(self.XML_COURSEID2, course_ids)
+        self.assertIn(self.course_locations[self.XML_COURSEID1].course_key, course_ids)
+        self.assertIn(self.course_locations[self.XML_COURSEID2].course_key, course_ids)
         # this course is in the directory from which we loaded courses but not in the map
         self.assertNotIn("edX/toy/TT_2012_Fall", course_ids)
 
@@ -297,11 +297,11 @@ class TestMixedModuleStore(LocMapperSetupSansDjango):
     @ddt.data('direct', 'split')
     def test_get_course(self, default_ms):
         self.initdb(default_ms)
-        for course_id in self.course_ids:
+        for course_location in self.course_locations.itervalues():
             # NOTE: use get_course if you just want the course. get_items is expensive
-            course = self.store.get_course(course_id)
+            course = self.store.get_course(course_location.course_key)
             self.assertIsNotNone(course)
-            self.assertEqual(course.id, course_id)
+            self.assertEqual(course.id, course_location.course_key)
 
     @ddt.data('direct', 'split')
     def test_get_parent_locations(self, default_ms):
@@ -335,21 +335,6 @@ class TestMixedModuleStore(LocMapperSetupSansDjango):
         else:
             self.assertEqual(found_orphans, [unicode(orphan.location)])
 
-    @ddt.data('split')
-    def test_create_item_from_course_id(self, default_ms):
-        """
-        Test code paths missed by the above:
-        * passing an old-style course_id which has a loc map to split's create_item
-        """
-        self.initdb(default_ms)
-        # create loc_map entry
-        loc_mapper().translate_location(self.MONGO_COURSEID)
-        orphan = self.store.create_item(self.MONGO_COURSEID, 'problem', block_id='orphan')
-        self.assertEqual(
-            orphan.location.course_key.version_agnostic(),
-            self.course_locations[self.MONGO_COURSEID].course_key
-        )
-
     @ddt.data('direct')
     def test_create_item_from_parent_location(self, default_ms):
         """
@@ -369,11 +354,11 @@ class TestMixedModuleStore(LocMapperSetupSansDjango):
         self.initdb(default_ms)
         course_locations = self.store.get_courses_for_wiki('toy')
         self.assertEqual(len(course_locations), 1)
-        self.assertIn(Location('edX', 'toy', 'course', '2012_Fall'), course_locations)
+        self.assertIn(self.course_locations[self.XML_COURSEID1], course_locations)
 
         course_locations = self.store.get_courses_for_wiki('simple')
         self.assertEqual(len(course_locations), 1)
-        self.assertIn(Location('edX', 'simple', 'course', '2012_Fall'), course_locations)
+        self.assertIn(self.course_locations[self.XML_COURSEID2], course_locations)
 
         self.assertEqual(len(self.store.get_courses_for_wiki('edX.simple.2012_Fall')), 0)
         self.assertEqual(len(self.store.get_courses_for_wiki('no_such_wiki')), 0)
