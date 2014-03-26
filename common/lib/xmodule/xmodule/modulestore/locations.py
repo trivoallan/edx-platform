@@ -2,7 +2,6 @@
 
 import logging
 import re
-from collections import namedtuple
 from opaque_keys import InvalidKeyError
 
 from xmodule.modulestore.keys import CourseKey, UsageKey, DefinitionKey, AssetKey
@@ -232,9 +231,13 @@ class LocationBase(object):
 
 
 class Location(LocationBase, UsageKey, DefinitionKey):
+
     CANONICAL_NAMESPACE = 'location'
     DEPRECATED_TAG = 'i4x'
     __slots__ = LocationBase.KEY_FIELDS
+
+    def map_into_course(self, course_key):
+        return Location(course_key.org, course_key.course, course_key.run, self.category, self.name, self.revision)
 
 
 class AssetLocation(LocationBase, AssetKey):

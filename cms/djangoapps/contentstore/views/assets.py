@@ -29,6 +29,7 @@ from django.http import HttpResponseNotFound
 from django.utils.translation import ugettext as _
 from pymongo import ASCENDING, DESCENDING
 from .access import has_course_access
+from xmodule.modulestore.locations import SlashSeparatedCourseKey
 
 __all__ = ['assets_handler']
 
@@ -125,7 +126,10 @@ def _assets_json(request, location):
     asset_json = []
     for asset in assets:
         asset_id = asset['_id']
-        asset_location = StaticContent.compute_location(asset_id['org'], asset_id['course'], asset_id['name'])
+        asset_location = StaticContent.compute_location(
+            SlashSeparatedCourseKey(asset_id['org'], asset_id['course'], asset_id.get('run', None)),
+            asset_id['name']
+        )
         # note, due to the schema change we may not have a 'thumbnail_location' in the result set
         thumbnail_location = asset.get('thumbnail_location', None)
 
@@ -151,7 +155,7 @@ def _get_assets_for_page(request, location, current_page, page_size, sort):
 
     old_location = loc_mapper().translate_locator_to_location(location)
 
-    course_reference = StaticContent.compute_location(old_location.org, old_location.course, old_location.name)
+    course_reference = StaticContent.compute_location(old_location.course_key, old_location.name)
     return contentstore().get_all_content_for_course(
         course_reference, start=start, maxresults=page_size, sort=sort
     )
@@ -184,7 +188,7 @@ def _upload_asset(request, location):
     filename = upload_file.name
     mime_type = upload_file.content_type
 
-    content_loc = StaticContent.compute_location(old_location.org, old_location.course, filename)
+    content_loc = StaticContent.compute_location(old_location.course_key, filename)
 
     chunked = upload_file.multiple_chunks()
     sc_partial = partial(StaticContent, content_loc, filename, mime_type)

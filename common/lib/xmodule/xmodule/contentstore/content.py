@@ -39,11 +39,10 @@ class StaticContent(object):
             extension=XASSET_THUMBNAIL_TAIL_NAME,)
 
     @staticmethod
-    def compute_location(org, course, path, revision=None, is_thumbnail=False):
+    def compute_location(course_key, path, revision=None, is_thumbnail=False):
         path = path.replace('/', '_')
         return AssetLocation(
-            org,
-            course,
+            course_key.org, course_key.course, course_key.run,
             'asset' if not is_thumbnail else 'thumbnail',
             AssetLocation.clean_keeping_underscores(path),
             revision
@@ -195,8 +194,9 @@ class ContentStore(object):
         # use a naming convention to associate originals with the thumbnail
         thumbnail_name = StaticContent.generate_thumbnail_name(content.location.name)
 
-        thumbnail_file_location = StaticContent.compute_location(content.location.org, content.location.course,
-                                                                 thumbnail_name, is_thumbnail=True)
+        thumbnail_file_location = StaticContent.compute_location(
+            content.location.course_key, thumbnail_name, is_thumbnail=True
+        )
 
         # if we're uploading an image, then let's generate a thumbnail so that we can
         # serve it up when needed without having to rescale on the fly
