@@ -883,7 +883,7 @@ class MongoModuleStore(ModuleStoreWriteBase):
         # recompute (and update) the metadata inheritance tree which is cached
         self.refresh_cached_metadata_inheritance_tree(location)
 
-    def get_parent_locations(self, location, course_id):
+    def get_parent_locations(self, location):
         '''Find all locations that are the parents of this location in this
         course.  Needed for path_to_location().
         '''

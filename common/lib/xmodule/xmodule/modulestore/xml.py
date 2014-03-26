@@ -759,18 +759,17 @@ class XMLModuleStore(ModuleStoreReadBase):
         """
         raise NotImplementedError("XMLModuleStores are read-only")
 
-    def get_parent_locations(self, location, course_id):
+    def get_parent_locations(self, location):
         '''Find all locations that are the parents of this location in this
         course.  Needed for path_to_location().
 
         returns an iterable of things that can be passed to Location.  This may
         be empty if there are no parents.
         '''
-        location = Location.ensure_fully_specified(location)
-        if not self.parent_trackers[course_id].is_known(location):
-            raise ItemNotFoundError("{0} not in {1}".format(location, course_id))
+        if not self.parent_trackers[location.course_key].is_known(location):
+            raise ItemNotFoundError("{0} not in {1}".format(location, location.course_key))
 
-        return self.parent_trackers[course_id].parents(location)
+        return self.parent_trackers[location.course_key].parents(location)
 
     def get_modulestore_type(self, course_id):
         """

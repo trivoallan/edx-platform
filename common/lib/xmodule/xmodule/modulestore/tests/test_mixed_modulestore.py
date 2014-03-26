@@ -10,12 +10,12 @@ from xmodule.modulestore import Location, MONGO_MODULESTORE_TYPE, SPLIT_MONGO_MO
 from xmodule.modulestore.exceptions import ItemNotFoundError
 
 from xmodule.modulestore.locator import BlockUsageLocator, CourseLocator
-from xmodule.modulestore.keys import CourseKey
 from xmodule.modulestore.tests.test_location_mapper import LocMapperSetupSansDjango, loc_mapper
 # Mixed modulestore depends on django, so we'll manually configure some django settings
 # before importing the module
 from django.conf import settings
 from xmodule.modulestore.locations import SlashSeparatedCourseKey
+from xmodule.modulestore.keys import CourseKey
 if not settings.configured:
     settings.configure()
 from xmodule.modulestore.mixed import MixedModuleStore
@@ -139,6 +139,12 @@ class TestMixedModuleStore(LocMapperSetupSansDjango):
             self.assertEqual(course.id, course_key)
             self.assertEqual(chapter.location, self.import_chapter_location)
 
+    def _course_key_from_string(self, string):
+        """
+        Get the course key for the given course string
+        """
+        return self.course_locations[string].course_key
+
     def initdb(self, default):
         """
         Initialize the database and create one test course in it
@@ -177,12 +183,20 @@ class TestMixedModuleStore(LocMapperSetupSansDjango):
         Make sure we get back the store type we expect for given mappings
         """
         self.initdb(default_ms)
-        self.assertEqual(self.store.get_modulestore_type(self.XML_COURSEID1), XML_MODULESTORE_TYPE)
-        self.assertEqual(self.store.get_modulestore_type(self.XML_COURSEID2), XML_MODULESTORE_TYPE)
+        self.assertEqual(self.store.get_modulestore_type(
+            self._course_key_from_string(self.XML_COURSEID1)), XML_MODULESTORE_TYPE
+        )
+        self.assertEqual(self.store.get_modulestore_type(
+            self._course_key_from_string(self.XML_COURSEID2)), XML_MODULESTORE_TYPE
+        )
         mongo_ms_type = MONGO_MODULESTORE_TYPE if default_ms == 'direct' else SPLIT_MONGO_MODULESTORE_TYPE
-        self.assertEqual(self.store.get_modulestore_type(self.MONGO_COURSEID), mongo_ms_type)
+        self.assertEqual(self.store.get_modulestore_type(
+            self._course_key_from_string(self.MONGO_COURSEID)), mongo_ms_type
+        )
         # try an unknown mapping, it should be the 'default' store
-        self.assertEqual(self.store.get_modulestore_type('foo/bar/2012_Fall'), mongo_ms_type)
+        self.assertEqual(self.store.get_modulestore_type(
+            CourseKey.from_string('foo/bar/2012_Fall')), mongo_ms_type
+        )
 
     @ddt.data('direct', 'split')
     def test_has_item(self, default_ms):
@@ -214,10 +228,7 @@ class TestMixedModuleStore(LocMapperSetupSansDjango):
     def test_get_items(self, default_ms):
         self.initdb(default_ms)
         for course_locn in self.course_locations.itervalues():
-            if hasattr(course_locn, 'course_key'):
-                locn = course_locn.course_key
-            else:
-                locn = course_locn.replace(org=None, course=None, name=None)
+            locn = course_locn.course_key
             # NOTE: use get_course if you just want the course. get_items is expensive
             modules = self.store.get_items(locn, category='course')
             self.assertEqual(len(modules), 1)
@@ -306,17 +317,11 @@ class TestMixedModuleStore(LocMapperSetupSansDjango):
     @ddt.data('direct', 'split')
     def test_get_parent_locations(self, default_ms):
         self.initdb(default_ms)
-        parents = self.store.get_parent_locations(
-            self.import_chapter_location,
-            self.MONGO_COURSEID
-        )
+        parents = self.store.get_parent_locations(self.import_chapter_location)
         self.assertEqual(len(parents), 1)
         self.assertEqual(parents[0], self.course_locations[self.MONGO_COURSEID])
 
-        parents = self.store.get_parent_locations(
-            self.xml_chapter_location,
-            self.XML_COURSEID1
-        )
+        parents = self.store.get_parent_locations(self.xml_chapter_location)
         self.assertEqual(len(parents), 1)
         self.assertEqual(parents[0], self.course_locations[self.XML_COURSEID1])
 

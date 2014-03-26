@@ -854,7 +854,7 @@ class SplitModuleItemTests(SplitModuleTest):
 
     def test_get_parents(self):
         '''
-        get_parent_locations(locator, [block_id], [branch]): [BlockUsageLocator]
+        get_parent_locations(locator): [BlockUsageLocator]
         '''
         locator = BlockUsageLocator(
                 CourseLocator(org='testx', offering='GreekHero', branch='draft'),

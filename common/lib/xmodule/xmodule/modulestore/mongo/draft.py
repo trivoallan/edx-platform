@@ -179,13 +179,13 @@ class DraftModuleStore(MongoModuleStore):
 
         return
 
-    def get_parent_locations(self, location, course_id):
+    def get_parent_locations(self, location):
         '''Find all locations that are the parents of this location.  Needed
         for path_to_location().
 
         returns an iterable of things that can be passed to Location.
         '''
-        return super(DraftModuleStore, self).get_parent_locations(location, course_id)
+        return super(DraftModuleStore, self).get_parent_locations(location)
 
     def publish(self, location, published_by_id):
         """
@@ -207,7 +207,7 @@ class DraftModuleStore(MongoModuleStore):
                 #   2) child moved
                 for child in original_published.children:
                     if child not in draft.children:
-                        rents = [Location(mom) for mom in self.get_parent_locations(child, None)]
+                        rents = [Location(mom) for mom in self.get_parent_locations(child)]
                         if (len(rents) == 1 and rents[0] == Location(location)):  # the 1 is this original_published
                             self.delete_item(child, True)
         super(DraftModuleStore, self).update_item(draft, '**replace_user**')

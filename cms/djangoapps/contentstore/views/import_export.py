@@ -337,7 +337,7 @@ def export_handler(request, tag=None, org=None, offering=None, branch=None, vers
             parent = None
             try:
                 failed_item = modulestore().get_item(e.location)
-                parent_locs = modulestore().get_parent_locations(failed_item.location, course_module.id)
+                parent_locs = modulestore().get_parent_locations(failed_item.location)
 
                 if len(parent_locs) > 0:
                     parent = modulestore().get_item(parent_locs[0])

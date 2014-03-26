@@ -493,7 +493,7 @@ def _delete_item_at_location(item_location, delete_children=False, delete_all_ve
 
     # cdodge: we need to remove our parent's pointer to us so that it is no longer dangling
     if delete_all_versions:
-        parent_locs = modulestore('direct').get_parent_locations(item_location, None)
+        parent_locs = modulestore('direct').get_parent_locations(item_location)
 
         item_url = item_location.url()
         for parent_loc in parent_locs:

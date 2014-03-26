@@ -432,7 +432,7 @@ class SplitMongoModuleStore(ModuleStoreWriteBase):
         else:
             return []
 
-    def get_parent_locations(self, locator, course_id=None):
+    def get_parent_locations(self, locator):
         '''
         Return the locations (Locators w/ block_ids) for the parents of this location in this
         course. Could use get_items(location, {'children': block_id}) but this is slightly faster.

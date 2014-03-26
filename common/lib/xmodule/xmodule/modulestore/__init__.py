@@ -135,8 +135,6 @@ class ModuleStoreRead(object):
                 return False
             if not self._value_matches(value, criteria):
                 return False
-            elif criteria is not None:
-                return False
         return True
 
     def _value_matches(self, target, criteria):
@@ -167,7 +165,7 @@ class ModuleStoreRead(object):
         pass
 
     @abstractmethod
-    def get_parent_locations(self, location, course_id):
+    def get_parent_locations(self, location):
         '''Find all locations that are the parents of this location in this
         course.  Needed for path_to_location().
 

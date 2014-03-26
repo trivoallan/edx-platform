@@ -33,7 +33,7 @@ class MixedModuleStore(ModuleStoreWriteBase):
         super(MixedModuleStore, self).__init__(**kwargs)
 
         self.modulestores = {}
-        self.mappings = {CourseKey.from_string(course_id): store_name for course_id, store_name in mappings.viewitems()}
+        self.mappings = {CourseKey.from_string(course_id): store_name for course_id, store_name in mappings.iteritems()}
 
         if 'default' not in stores:
             raise Exception('Missing a default modulestore in the MixedModuleStore __init__ method.')
@@ -164,12 +164,12 @@ class MixedModuleStore(ModuleStoreWriteBase):
         except ItemNotFoundError:
             return None
 
-    def get_parent_locations(self, location, course_id):
+    def get_parent_locations(self, location):
         """
         returns the parent locations for a given location and course_id
         """
-        store = self._get_modulestore_for_courseid(course_id)
-        return store.get_parent_locations(location, course_id)
+        store = self._get_modulestore_for_courseid(location.course_key)
+        return store.get_parent_locations(location)
 
     def get_modulestore_type(self, course_id):
         """

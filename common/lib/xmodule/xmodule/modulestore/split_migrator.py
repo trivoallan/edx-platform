@@ -125,7 +125,7 @@ class SplitMigrator(object):
                     )
                     awaiting_adoption[module.location] = new_locator.block_id
         for draft_location, new_block_id in awaiting_adoption.iteritems():
-            for parent_loc in self.draft_modulestore.get_parent_locations(draft_location, course_key):
+            for parent_loc in self.draft_modulestore.get_parent_locations(draft_location):
                 old_parent = self.draft_modulestore.get_item(parent_loc)
                 new_parent = self.split_modulestore.get_item(
                     self.loc_mapper.translate_location(old_parent.location, False)
