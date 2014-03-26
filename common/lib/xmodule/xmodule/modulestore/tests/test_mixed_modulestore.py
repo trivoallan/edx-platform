@@ -338,7 +338,7 @@ class TestMixedModuleStore(LocMapperSetupSansDjango):
         if default_ms == 'split':
             self.assertEqual(found_orphans, [orphan.location.version_agnostic()])
         else:
-            self.assertEqual(found_orphans, [unicode(orphan.location)])
+            self.assertEqual(found_orphans, [orphan.location.url()])
 
     @ddt.data('direct')
     def test_create_item_from_parent_location(self, default_ms):
