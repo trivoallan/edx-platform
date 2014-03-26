@@ -306,7 +306,9 @@ class MongoModuleStore(ModuleStoreWriteBase):
         # get all collections in the course, this query should not return any leaf nodes
         # note this is a bit ugly as when we add new categories of containers, we have to add it here
 
-        block_types_with_children = set(name for name, class_ in XBlock.load_classes() if getattr(class_, 'has_children', False))
+        block_types_with_children = set(
+            name for name, class_ in XBlock.load_classes() if getattr(class_, 'has_children', False)
+        )
         query = SON([
             ('_id.tag', 'i4x'),
             ('_id.org', course_id.org),

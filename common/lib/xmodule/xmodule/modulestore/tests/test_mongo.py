@@ -1,7 +1,7 @@
 from pprint import pprint
 # pylint: disable=E0611
 from nose.tools import assert_equals, assert_raises, \
-    assert_not_equals, assert_false
+    assert_not_equals, assert_false, assert_true, assert_greater
 from itertools import ifilter
 # pylint: enable=E0611
 import pymongo
@@ -24,6 +24,7 @@ from xmodule.modulestore.tests.test_modulestore import check_path_to_location
 from IPython.testing.nose_assert_methods import assert_in
 from xmodule.exceptions import NotFoundError
 from xmodule.modulestore.exceptions import InsufficientSpecificationError
+from git.test.lib.asserts import assert_not_none
 
 log = logging.getLogger(__name__)
 
@@ -104,25 +105,10 @@ class TestMongoModuleStore(object):
     def tearDown(self):
         pass
 
-    def get_course_by_id(self, name):
-        """
-        Returns the first course with `id` of `name`, or `None` if there are none.
-        """
-        courses = self.store.get_courses()
-        return next(ifilter(lambda x: x.id == name, courses), None)
-
-    def course_with_id_exists(self, name):
-        """
-        Returns true iff there exists some course with `id` of `name`.
-        """
-        return (self.get_course_by_id(name) is not None)
-
     def test_init(self):
-        '''Make sure the db loads, and print all the locations in the db.
-        Call this directly from failing tests to see what is loaded'''
+        '''Make sure the db loads'''
         ids = list(self.connection[DB][COLLECTION].find({}, {'_id': True}))
-
-        pprint([Location(i['_id']).url() for i in ids])
+        assert_greater(len(ids), 12)
 
     def test_mongo_modulestore_type(self):
         store = MongoModuleStore(
@@ -135,53 +121,59 @@ class TestMongoModuleStore(object):
         '''Make sure the course objects loaded properly'''
         courses = self.store.get_courses()
         assert_equals(len(courses), 5)
-        assert self.course_with_id_exists('edX/simple/2012_Fall')
-        assert self.course_with_id_exists('edX/simple_with_draft/2012_Fall')
-        assert self.course_with_id_exists('edX/test_import_course/2012_Fall')
-        assert self.course_with_id_exists('edX/test_unicode/2012_Fall')
-        assert self.course_with_id_exists('edX/toy/2012_Fall')
+        course_ids = [course.id for course in courses]
+        for course_key in [
+            CourseKey.from_string(key_string)
+            for key_string in [
+                'edX/simple/2012_Fall', 'edX/simple_with_draft/2012_Fall',
+                'edX/test_import_course/2012_Fall', 'edX/test_unicode/2012_Fall', 'edX/toy/2012_Fall'
+            ]
+        ]:
+            assert_in(course_key, course_ids)
+            course = self.store.get_course(course_key)
+            assert_not_none(course)
 
     def test_loads(self):
-        assert_not_equals(
-            self.store.get_item("i4x://edX/toy/course/2012_Fall"),
-            None)
+        assert_not_none(
+            self.store.get_item(Location.from_string("edX/toy/2012_Fall/course/2012_Fall"))
+        )
 
-        assert_not_equals(
-            self.store.get_item("i4x://edX/simple/course/2012_Fall"),
-            None)
+        assert_not_none(
+            self.store.get_item(Location.from_string("edX/simple/2012_Fall/course/2012_Fall")),
+        )
 
-        assert_not_equals(
-            self.store.get_item("i4x://edX/toy/video/Welcome"),
-            None)
+        assert_not_none(
+            self.store.get_item(Location.from_string("edX/toy/2012_Fall/video/Welcome")),
+        )
 
     def test_unicode_loads(self):
-        assert_not_equals(
-            self.store.get_item("i4x://edX/test_unicode/course/2012_Fall"),
-            None)
+        assert_not_none(
+            self.store.get_item(Location.from_string("edX/test_unicode/2012_Fall/course/2012_Fall")),
+        )
         # All items with ascii-only filenames should load properly.
-        assert_not_equals(
-            self.store.get_item("i4x://edX/test_unicode/video/Welcome"),
-            None)
-        assert_not_equals(
-            self.store.get_item("i4x://edX/test_unicode/video/Welcome"),
-            None)
-        assert_not_equals(
-            self.store.get_item("i4x://edX/test_unicode/chapter/Overview"),
-            None)
+        assert_not_none(
+            self.store.get_item(Location.from_string("edX/test_unicode/2012_Fall/video/Welcome")),
+        )
+        assert_not_none(
+            self.store.get_item(Location.from_string("edX/test_unicode/2012_Fall/video/Welcome")),
+        )
+        assert_not_none(
+            self.store.get_item(Location.from_string("edX/test_unicode/2012_Fall/chapter/Overview")),
+        )
 
 
     def test_find_one(self):
-        assert_not_equals(
-            self.store._find_one(Location("i4x://edX/toy/course/2012_Fall")),
-            None)
+        assert_not_none(
+            self.store._find_one(Location.from_string("edX/toy/2012_Fall/course/2012_Fall")),
+        )
 
-        assert_not_equals(
-            self.store._find_one(Location("i4x://edX/simple/course/2012_Fall")),
-            None)
+        assert_not_none(
+            self.store._find_one(Location.from_string("edX/simple/2012_Fall/course/2012_Fall")),
+        )
 
-        assert_not_equals(
-            self.store._find_one(Location("i4x://edX/toy/video/Welcome")),
-            None)
+        assert_not_none(
+            self.store._find_one(Location.from_string("edX/toy/2012_Fall/video/Welcome")),
+        )
 
     def test_path_to_location(self):
         '''Make sure that path_to_location works'''
@@ -210,7 +202,7 @@ class TestMongoModuleStore(object):
 
             Assumes the information is desired for courses[4] ('toy' course).
             """
-            course = self.get_course_by_id('edX/toy/2012_Fall')
+            course = self.store.get_course(CourseKey.from_string('edX/toy/2012_Fall'))
             return course.tabs[index]['name']
 
         # There was a bug where model.save was not getting called after the static tab name
@@ -225,11 +217,11 @@ class TestMongoModuleStore(object):
         """
         Test getting, setting, and defaulting the locked attr and arbitrary attrs.
         """
-        location = Location('edX', 'toy', 'course', '2012_Fall')
+        location = Location('edX', 'toy', '2012_Fall', 'course', '2012_Fall')
         course_content, __ = TestMongoModuleStore.content_store.get_all_content_for_course(location)
-        assert len(course_content) > 0
+        assert_true(len(course_content) > 0)
         # a bit overkill, could just do for content[0]
-        for content_key in course_content:
+        for content in course_content:
             assert not content.get('locked', False)
             assert not TestMongoModuleStore.content_store.get_attr(content['_id'], 'locked', False)
             attrs = TestMongoModuleStore.content_store.get_attrs(content['_id'])
@@ -282,7 +274,7 @@ class TestMongoModuleStore(object):
         for course_number in self.courses:
             course_locations = self.store.get_courses_for_wiki(course_number)
             assert_equals(len(course_locations), 1)
-            assert_equals(Location('edX', course_number, 'course', '2012_Fall'), course_locations[0])
+            assert_equals(Location('edX', course_number, '2012_Fall', 'course', '2012_Fall'), course_locations[0])
 
         course_locations = self.store.get_courses_for_wiki('no_such_wiki')
         assert_equals(len(course_locations), 0)
@@ -300,7 +292,7 @@ class TestMongoModuleStore(object):
         course_locations = self.store.get_courses_for_wiki('simple')
         assert_equals(len(course_locations), 2)
         for course_number in ['toy', 'simple']:
-            assert_in(Location('edX', course_number, 'course', '2012_Fall'), course_locations)
+            assert_in(Location('edX', course_number, '2012_Fall', 'course', '2012_Fall'), course_locations)
 
         # configure simple course to use unique wiki_slug.
         simple_course = self.store.get_course(CourseKey.from_string('edX/simple/2012_Fall'))
@@ -309,7 +301,7 @@ class TestMongoModuleStore(object):
         # it should be retrievable with its new wiki_slug
         course_locations = self.store.get_courses_for_wiki('edX.simple.2012_Fall')
         assert_equals(len(course_locations), 1)
-        assert_in(Location('edX', 'simple', 'course', '2012_Fall'), course_locations)
+        assert_in(Location('edX', 'simple', '2012_Fall', 'course', '2012_Fall'), course_locations)
 
 
 class TestMongoKeyValueStore(object):

@@ -6,7 +6,7 @@ import json
 
 from .xml import XMLModuleStore, ImportSystem, ParentTracker
 from xmodule.modulestore import Location
-from xmodule.modulestore.keys import CourseKey
+from xmodule.modulestore.keys import CourseKey, UsageKey
 from xblock.fields import Scope, Reference, ReferenceList, ReferenceValueDict
 from xmodule.contentstore.content import StaticContent
 from .inheritance import own_metadata
@@ -606,7 +606,11 @@ def validate_category_hierarchy(
             parents.append(module)
 
     for parent in parents:
-        for child_loc in [Location(child) for child in parent.children]:
+        children = [
+            child if isinstance(child, UsageKey) else course_id.make_usage_key_from_deprecated_string(child)
+            for child in parent.children
+        ]
+        for child_loc in children:
             if child_loc.category != expected_child_category:
                 err_cnt += 1
                 print(
@@ -697,7 +701,7 @@ def perform_xlint(
         warn_cnt += _warn_cnt
 
     # first count all errors and warnings as part of the XMLModuleStore import
-    for err_log in module_store._location_errors.itervalues():
+    for err_log in module_store._course_errors.itervalues():
         for err_log_entry in err_log.errors:
             msg = err_log_entry[0]
             if msg.startswith('ERROR:'):
@@ -745,7 +749,7 @@ def perform_xlint(
         )
 
         # check for a presence of a course marketing video
-        if not module_store.get_items(CourseKey.from_string(course_id), category='about', name='video'):
+        if not module_store.get_items(course_id, category='about', name='video'):
             print(
                 "WARN: Missing course marketing video. It is recommended "
                 "that every course have a marketing video."

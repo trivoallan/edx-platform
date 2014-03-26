@@ -69,8 +69,12 @@ class SlashSeparatedCourseKey(CourseKey):
         """
         match = URL_RE.match(location_url)
         if match is None:
-            log.debug(u"location %r doesn't match URL", location_url)
-            raise InvalidKeyError(Location, location_url)
+            # try seeing if it's a legitimate new form
+            try:
+                return UsageKey.from_string(location_url)
+            except InvalidKeyError:
+                log.debug(u"location %r doesn't match URL", location_url)
+                raise InvalidKeyError(Location, location_url)
         groups = match.groupdict()
         if 'tag' in groups:
             del groups['tag']
@@ -206,7 +210,7 @@ class LocationBase(object):
             (?P<course>[^/]+)/
             (?P<run>[^/]+)/
             (?P<category>[^/]+)/
-            (?P<name>[^@]+)
+            (?P<name>[^@/]+)
             (@(?P<revision>[^/]+))?
         """
 
