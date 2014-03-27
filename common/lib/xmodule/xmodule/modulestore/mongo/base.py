@@ -836,8 +836,10 @@ class MongoModuleStore(ModuleStoreWriteBase):
             }
             if xblock.has_children:
                 # convert all to urls
-                xblock.children = [child.url() if isinstance(child, Location) else child
-                                   for child in xblock.children]
+                xblock.children = [
+                    child.to_deprecated_string() if isinstance(child, Location) else child
+                    for child in xblock.children
+                ]
                 payload.update({'definition.children': xblock.children})
             self._update_single_item(xblock.location, payload)
             # for static tabs, their containing course also records their display name
@@ -889,7 +891,7 @@ class MongoModuleStore(ModuleStoreWriteBase):
         course.  Needed for path_to_location().
         '''
         query = self._course_key_to_son(location.course_key)
-        query['definition.children'] = location.url()
+        query['definition.children'] = location.to_deprecated_string()
         items = self.collection.find(query, {'_id': True})
         return [
             location.course_key.make_usage_key(i['_id']['category'], i['_id']['name'])
@@ -918,7 +920,9 @@ class MongoModuleStore(ModuleStoreWriteBase):
         item_locs = set()
         for item in all_items:
             if item['_id']['category'] != 'course':
-                item_locs.add(self._location_from_id(item['_id'], course_key.run).replace(revision=None).url())
+                item_locs.add(
+                    self._location_from_id(item['_id'], course_key.run).replace(revision=None).to_deprecated_string()
+                )
             all_reachable = all_reachable.union(item.get('definition', {}).get('children', []))
         item_locs -= all_reachable
         return list(item_locs)
