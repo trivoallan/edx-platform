@@ -425,6 +425,7 @@ def import_course_draft(
         # For each index_in_children_list key, there is a list of vertical descriptors.
         for key in sorted(drafts.iterkeys()):
             for descriptor in drafts[key]:
+                course_key = descriptor.location.course_key
                 try:
                     def _import_module(module):
                         module.location = module.location.replace(revision='draft')
@@ -437,7 +438,7 @@ def import_course_draft(
                             sequential_url = module.xml_attributes['parent_sequential_url']
                             index = int(module.xml_attributes['index_in_children_list'])
 
-                            seq_location = Location(sequential_url)
+                            seq_location = course_key.make_usage_key_from_deprecated_string(sequential_url)
 
                             # IMPORTANT: Be sure to update the sequential
                             # in the NEW namespace

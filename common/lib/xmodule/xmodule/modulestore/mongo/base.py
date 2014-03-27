@@ -208,11 +208,11 @@ class CachingDescriptorSystem(MakoDescriptorSystem):
                 )
 
 
-def location_to_son(location, prefix=''):
+def location_to_son(location, prefix='', tag='i4x'):
     """
     Converts a location into a SON object with the same key order
     """
-    son = SON({'tag': 'i4x'})
+    son = SON({prefix + 'tag': tag})
     for field_name in location.KEY_FIELDS:
         # Temporary filtering of run field
         if field_name != 'run':
@@ -221,15 +221,16 @@ def location_to_son(location, prefix=''):
 
 
 # The only thing using this w/ wildcards is contentstore.mongo for asset retrieval
-def location_to_query(location, wildcard=True):
+def location_to_query(location, wildcard=True, tag='i4x'):
     """
-    Takes a Location and returns a SON object that will query for that location.
+    Takes a Location and returns a SON object that will query for that location by subfields
+    rather than subdoc. Note: location_to_son is faster in mongo as it does subdoc equivalence.
     Fields in location that are None are ignored in the query
 
     If `wildcard` is True, then a None in a location is treated as a wildcard
     query. Otherwise, it is searched for literally
     """
-    query = location_to_son(location, prefix='_id.')
+    query = location_to_son(location, prefix='_id.', tag=tag)
 
     if wildcard:
         for key, value in query.items():
@@ -949,7 +950,8 @@ class MongoModuleStore(ModuleStoreWriteBase):
         field_data = KvsFieldData(kvs)
         return field_data
 
-    def _location_from_id(self, id_dict, run):
+    @classmethod
+    def _location_from_id(cls, id_dict, run):
         """
         Return the Location decoding this id_dict and run
         """

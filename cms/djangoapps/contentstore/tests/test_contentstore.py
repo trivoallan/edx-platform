@@ -176,8 +176,9 @@ class ContentStoreToyCourseTest(ModuleStoreTestCase):
         """
         course_assets, __ = content_store.get_all_content_for_course(course_id)
         self.assertGreater(len(course_assets), 0, "No assets to lock")
-        content_store.set_attr(course_assets[0], 'locked', True)
-        return course_assets[0]
+        asset_key = modulestore()._location_from_id(course_assets[0]['_id'], course_id)
+        content_store.set_attr(asset_key, 'locked', True)
+        return asset_key
 
     def test_edit_unit_toy(self):
         self.check_edit_unit('toy')

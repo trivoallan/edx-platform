@@ -221,23 +221,26 @@ class TestMongoModuleStore(object):
         # a bit overkill, could just do for content[0]
         for content in course_content:
             assert not content.get('locked', False)
-            assert not TestMongoModuleStore.content_store.get_attr(content['_id'], 'locked', False)
-            attrs = TestMongoModuleStore.content_store.get_attrs(content['_id'])
+            asset_key = TestMongoModuleStore.store._location_from_id(content['_id'], location.run)
+            assert not TestMongoModuleStore.content_store.get_attr(asset_key, 'locked', False)
+            attrs = TestMongoModuleStore.content_store.get_attrs(asset_key)
             assert_in('uploadDate', attrs)
             assert not attrs.get('locked', False)
-            TestMongoModuleStore.content_store.set_attr(content['_id'], 'locked', True)
-            assert TestMongoModuleStore.content_store.get_attr(content['_id'], 'locked', False)
-            attrs = TestMongoModuleStore.content_store.get_attrs(content['_id'])
+            TestMongoModuleStore.content_store.set_attr(asset_key, 'locked', True)
+            assert TestMongoModuleStore.content_store.get_attr(asset_key, 'locked', False)
+            attrs = TestMongoModuleStore.content_store.get_attrs(asset_key)
             assert_in('locked', attrs)
             assert attrs['locked'] is True
-            TestMongoModuleStore.content_store.set_attrs(content['_id'], {'miscel': 99})
-            assert_equals(TestMongoModuleStore.content_store.get_attr(content['_id'], 'miscel'), 99)
+            TestMongoModuleStore.content_store.set_attrs(asset_key, {'miscel': 99})
+            assert_equals(TestMongoModuleStore.content_store.get_attr(asset_key, 'miscel'), 99)
+
+        asset_key = TestMongoModuleStore.store._location_from_id(course_content[0]['_id'], location.run)
         assert_raises(
-            AttributeError, TestMongoModuleStore.content_store.set_attr, course_content[0]['_id'],
+            AttributeError, TestMongoModuleStore.content_store.set_attr, asset_key,
             'md5', 'ff1532598830e3feac91c2449eaa60d6'
         )
         assert_raises(
-            AttributeError, TestMongoModuleStore.content_store.set_attrs, course_content[0]['_id'],
+            AttributeError, TestMongoModuleStore.content_store.set_attrs, asset_key,
             {'foo': 9, 'md5': 'ff1532598830e3feac91c2449eaa60d6'}
         )
         assert_raises(
@@ -260,7 +263,7 @@ class TestMongoModuleStore(object):
             {'displayname': 'hello'}
         )
         assert_raises(
-            InsufficientSpecificationError, TestMongoModuleStore.content_store.set_attrs,
+            NotFoundError, TestMongoModuleStore.content_store.set_attrs,
             Location('bogus', 'bogus', 'bogus', 'asset', None),
             {'displayname': 'hello'}
         )
