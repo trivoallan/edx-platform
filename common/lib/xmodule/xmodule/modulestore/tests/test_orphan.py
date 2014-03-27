@@ -44,7 +44,7 @@ class TestOrphan(unittest.TestCase):
         self.addCleanup(self.tear_down_split)
         self.old_mongo = MongoModuleStore(self.db_config, **self.modulestore_options)
         self.addCleanup(self.tear_down_mongo)
-        self.course_location = None
+        self.old_course_key = None
         self._create_course()
 
     def tear_down_split(self):
@@ -70,7 +70,7 @@ class TestOrphan(unittest.TestCase):
         Create the item of the given category and block id in split and old mongo, add it to the optional
         parent. The parent category is only needed because old mongo requires it for the id.
         """
-        location = Location('test_org', 'test_course', 'test_run', category, name)
+        location = self.old_course_key.make_usage_key(category, name)
         self.old_mongo.create_and_save_xmodule(location, data, metadata, runtime)
         if isinstance(data, basestring):
             fields = {'data': data}
@@ -79,7 +79,7 @@ class TestOrphan(unittest.TestCase):
         fields.update(metadata)
         if parent_name:
             # add child to parent in mongo
-            parent_location = Location('test_org', 'test_course', 'test_run', parent_category, parent_name)
+            parent_location = self.old_course_key.make_usage_key(parent_category, parent_name)
             parent = self.old_mongo.get_item(parent_location)
             parent.children.append(location.url())
             self.old_mongo.update_item(parent, self.userid)
@@ -89,11 +89,7 @@ class TestOrphan(unittest.TestCase):
                 block_id=parent_name
             )
         else:
-            course_or_parent_locator = CourseLocator(
-                org='test_org',
-                offering='test_course.runid',
-                branch='draft',
-            )
+            course_or_parent_locator = self.split_course_key
         self.split_mongo.create_item(course_or_parent_locator, category, self.userid, block_id=name, fields=fields)
 
     def _create_course(self):
@@ -102,9 +98,8 @@ class TestOrphan(unittest.TestCase):
         * some attached children
         * some orphans
         """
-        date_proxy = Date()
         metadata = {
-            'start': date_proxy.to_json(datetime.datetime(2000, 3, 13, 4)),
+            'start': datetime.datetime(2000, 3, 13, 4),
             'display_name': 'Migration test course',
         }
         data = {
@@ -114,11 +109,11 @@ class TestOrphan(unittest.TestCase):
         fields.update(data)
         # split requires the course to be created separately from creating items
         self.split_mongo.create_course(
-            'test_org', 'test_offering', self.userid, self.split_course_key.offering, fields=fields, root_block_id='runid'
+            self.split_course_key.org, self.split_course_key.offering, self.userid, fields=fields, root_block_id='runid'
         )
-        self.course_location = Location('test_org', 'test_course', 'test_run', 'course', 'runid')
-        self.old_mongo.create_and_save_xmodule(self.course_location, data, metadata)
-        runtime = self.old_mongo.get_item(self.course_location).runtime
+        old_course = self.old_mongo.create_course(self.split_course_key.org, 'test_course/runid', fields=fields)
+        self.old_course_key = old_course.id
+        runtime = old_course.runtime
 
         self._create_item('chapter', 'Chapter1', {}, {'display_name': 'Chapter 1'}, 'course', 'runid', runtime)
         self._create_item('chapter', 'Chapter2', {}, {'display_name': 'Chapter 2'}, 'course', 'runid', runtime)
@@ -135,13 +130,13 @@ class TestOrphan(unittest.TestCase):
         """
         Test that old mongo finds the orphans
         """
-        orphans = self.old_mongo.get_orphans(self.course_location.course_key)
+        orphans = self.old_mongo.get_orphans(self.old_course_key)
         self.assertEqual(len(orphans), 3, "Wrong # {}".format(orphans))
-        location = self.course_location.replace(category='chapter', name='OrphanChapter')
+        location = self.old_course_key.make_usage_key('chapter', name='OrphanChapter')
         self.assertIn(location.url(), orphans)
-        location = self.course_location.replace(category='vertical', name='OrphanVert')
+        location = self.old_course_key.make_usage_key('vertical', name='OrphanVert')
         self.assertIn(location.url(), orphans)
-        location = self.course_location.replace(category='html', name='OrphanHtml')
+        location = self.old_course_key.make_usage_key('html', 'OrphanHtml')
         self.assertIn(location.url(), orphans)
 
     def test_split_orphan(self):
