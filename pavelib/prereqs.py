@@ -7,7 +7,7 @@ import hashlib
 from distutils import sysconfig
 from paver.easy import *
 from .utils.envs import Env
-
+from .utils.thread import run_threaded
 
 PREREQS_MD5_DIR = os.getenv('PREREQ_CACHE_DIR', Env.REPO_ROOT / '.prereqs_cache')
 NPM_REGISTRY = "http://registry.npmjs.org/"
@@ -111,6 +111,8 @@ def install_prereqs():
     """
     Installs Ruby, Node and Python prerequisites
     """
-    prereq_cache("Ruby prereqs", ["Gemfile"], install_ruby_prereqs)
-    prereq_cache("Node prereqs", ["package.json"], install_node_prereqs)
-    prereq_cache("Python prereqs", PYTHON_REQ_FILES + [sysconfig.get_python_lib()], install_python_prereqs)
+    run_threaded([
+        (prereq_cache, ("Ruby prereqs", ["Gemfile"], install_ruby_prereqs)),
+        (prereq_cache, ("Node prereqs", ["package.json"], install_node_prereqs)),
+        (prereq_cache, ("Python prereqs", PYTHON_REQ_FILES, install_python_prereqs)),
+    ])
