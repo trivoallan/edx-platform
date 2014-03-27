@@ -15,7 +15,6 @@ from cache_toolbox.core import del_cached_content
 
 from xmodule.contentstore.django import contentstore
 from xmodule.modulestore.django import modulestore
-from xmodule.modulestore import Location
 from xmodule.contentstore.content import StaticContent
 from xmodule.modulestore import InvalidLocationError
 from xmodule.exceptions import NotFoundError
@@ -30,6 +29,8 @@ from django.utils.translation import ugettext as _
 from pymongo import ASCENDING, DESCENDING
 from .access import has_course_access
 from xmodule.modulestore.locations import SlashSeparatedCourseKey
+from xmodule.modulestore.keys import AssetKey
+from xmodule.modulestore.exceptions import ItemNotFoundError
 
 __all__ = ['assets_handler']
 
@@ -127,7 +128,7 @@ def _assets_json(request, location):
     for asset in assets:
         asset_id = asset['_id']
         asset_location = StaticContent.compute_location(
-            SlashSeparatedCourseKey(asset_id['org'], asset_id['course'], asset_id.get('run', None)),
+            SlashSeparatedCourseKey(asset_id['org'], asset_id['course'], asset_id.get('run', location.run)),
             asset_id['name']
         )
         # note, due to the schema change we may not have a 'thumbnail_location' in the result set
@@ -175,7 +176,7 @@ def _upload_asset(request, location):
     # existence
     try:
         modulestore().get_item(old_location)
-    except:
+    except ItemNotFoundError:
         # no return it as a Bad Request response
         logging.error("Could not find course: %s", old_location)
         return HttpResponseBadRequest()
@@ -231,12 +232,12 @@ def _upload_asset(request, location):
 @require_http_methods(("DELETE", "POST", "PUT"))
 @login_required
 @ensure_csrf_cookie
-def _update_asset(request, location, asset_id):
+def _update_asset(request, location, asset_path_encoding):
     """
     restful CRUD operations for a course asset.
     Currently only DELETE, POST, and PUT methods are implemented.
 
-    asset_id: the URL of the asset (used by Backbone as the id)
+    asset_path_encoding: the odd /c4x/org/course/category/name repr of the asset (used by Backbone as the id)
     """
     def get_asset_location(asset_id):
         """ Helper method to get the location (and verify it is valid). """

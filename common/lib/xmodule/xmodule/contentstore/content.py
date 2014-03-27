@@ -1,3 +1,4 @@
+import bson.son
 XASSET_LOCATION_TAG = 'c4x'
 XASSET_SRCREF_PREFIX = 'xasset:'
 
@@ -61,7 +62,7 @@ class StaticContent(object):
     @staticmethod
     def get_url_path_from_location(location):
         if location is not None:
-            return u"/{0.tag}/{0.org}/{0.course}/{0.category}/{0.name}".format(location)
+            return u"/c4x/{0.org}/{0.course}/{0.category}/{0.name}".format(location)
         else:
             return None
 
@@ -96,18 +97,22 @@ class StaticContent(object):
 
     @staticmethod
     def get_id_from_location(location):
-        return {'tag': location.tag, 'org': location.org, 'course': location.course,
-                'category': location.category, 'name': location.name,
-                'revision': location.revision}
+        return bson.son.SON([
+            ('tag', 'c4x'), ('org', location.org), ('course', location.course),
+            ('category', location.category), ('name', location.name),
+            ('revision', location.revision),
+        ])
 
     @staticmethod
-    def get_location_from_path(path):
-        from nose.tools import set_trace; set_trace()
+    def get_location_from_path(path, course_key):
         # remove leading / character if it is there one
         if path.startswith('/'):
             path = path[1:]
+        if path.startswith('c4x/'):
+            # convert to old url syntax
+            path = 'c4x://' + path[4:]
 
-        return Location(path.split('/'))
+        return course_key.make_usage_key_from_deprecated_string(path)
 
     @staticmethod
     def convert_legacy_static_url_with_course_id(path, course_id):
