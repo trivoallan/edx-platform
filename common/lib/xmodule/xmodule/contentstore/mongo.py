@@ -3,7 +3,7 @@ import gridfs
 from gridfs.errors import NoFile
 
 from xmodule.modulestore import Location
-from xmodule.modulestore.mongo.base import location_to_query
+from xmodule.modulestore.mongo.base import location_to_query, MongoModuleStore
 from xmodule.contentstore.content import XASSET_LOCATION_TAG
 
 import logging
@@ -131,7 +131,7 @@ class MongoContentStore(ContentStore):
         assets, __ = self.get_all_content_for_course(course_location)
 
         for asset in assets:
-            asset_location = Location(asset['_id'])
+            asset_location = MongoModuleStore._location_from_id(asset['_id'], course_location.run)
             self.export(asset_location, output_directory)
             for attr, value in asset.iteritems():
                 if attr not in ['_id', 'md5', 'uploadDate', 'length', 'chunkSize']:

@@ -68,23 +68,22 @@ def assets_handler(request, tag=None, org=None, offering=None, branch=None, vers
     response_format = request.REQUEST.get('format', 'html')
     if response_format == 'json' or 'application/json' in request.META.get('HTTP_ACCEPT', 'application/json'):
         if request.method == 'GET':
-            return _assets_json(request, location)
+            return _assets_json(request, sscourse_key)
         else:
-            return _update_asset(request, location, asset_id)
+            return _update_asset(request, sscourse_key, asset_id)
     elif request.method == 'GET':  # assume html
-        return _asset_index(request, location)
+        return _asset_index(request, location, sscourse_key)
     else:
         return HttpResponseNotFound()
 
 
-def _asset_index(request, location):
+def _asset_index(request, location, course_key):
     """
     Display an editable asset library.
 
     Supports start (0-based index into the list of assets) and max query parameters.
     """
-    old_location = loc_mapper().translate_locator_to_location(location)
-    course_module = modulestore().get_item(old_location)
+    course_module = modulestore().get_course(course_key)
 
     return render_to_response('asset_index.html', {
         'context_course': course_module,
@@ -92,7 +91,7 @@ def _asset_index(request, location):
     })
 
 
-def _assets_json(request, location):
+def _assets_json(request, course_key):
     """
     Display an editable asset library.
 
@@ -114,23 +113,20 @@ def _assets_json(request, location):
 
     current_page = max(requested_page, 0)
     start = current_page * requested_page_size
-    assets, total_count = _get_assets_for_page(request, location, current_page, requested_page_size, sort)
+    assets, total_count = _get_assets_for_page(request, course_key, current_page, requested_page_size, sort)
     end = start + len(assets)
 
     # If the query is beyond the final page, then re-query the final page so that at least one asset is returned
     if requested_page > 0 and start >= total_count:
         current_page = int(math.floor((total_count - 1) / requested_page_size))
         start = current_page * requested_page_size
-        assets, total_count = _get_assets_for_page(request, location, current_page, requested_page_size, sort)
+        assets, total_count = _get_assets_for_page(request, course_key, current_page, requested_page_size, sort)
         end = start + len(assets)
 
     asset_json = []
     for asset in assets:
         asset_id = asset['_id']
-        asset_location = StaticContent.compute_location(
-            SlashSeparatedCourseKey(asset_id['org'], asset_id['course'], asset_id.get('run', location.run)),
-            asset_id['name']
-        )
+        asset_location = StaticContent.compute_location(course_key, asset_id['name'])
         # note, due to the schema change we may not have a 'thumbnail_location' in the result set
         thumbnail_location = asset.get('thumbnail_location', None)
 
@@ -148,37 +144,32 @@ def _assets_json(request, location):
     })
 
 
-def _get_assets_for_page(request, location, current_page, page_size, sort):
+def _get_assets_for_page(request, course_key, current_page, page_size, sort):
     """
     Returns the list of assets for the specified page and page size.
     """
     start = current_page * page_size
 
-    old_location = loc_mapper().translate_locator_to_location(location)
-
-    course_reference = StaticContent.compute_location(old_location.course_key, old_location.name)
     return contentstore().get_all_content_for_course(
-        course_reference, start=start, maxresults=page_size, sort=sort
+        course_key, start=start, maxresults=page_size, sort=sort
     )
 
 
 @require_POST
 @ensure_csrf_cookie
 @login_required
-def _upload_asset(request, location):
+def _upload_asset(request, course_key):
     '''
     This method allows for POST uploading of files into the course asset
     library, which will be supported by GridFS in MongoDB.
     '''
-    old_location = loc_mapper().translate_locator_to_location(location)
-
     # Does the course actually exist?!? Get anything from it to prove its
     # existence
     try:
-        modulestore().get_item(old_location)
+        modulestore().get_course(course_key)
     except ItemNotFoundError:
         # no return it as a Bad Request response
-        logging.error("Could not find course: %s", old_location)
+        logging.error("Could not find course: %s", course_key)
         return HttpResponseBadRequest()
 
     # compute a 'filename' which is similar to the location formatting, we're
@@ -189,7 +180,7 @@ def _upload_asset(request, location):
     filename = upload_file.name
     mime_type = upload_file.content_type
 
-    content_loc = StaticContent.compute_location(old_location.course_key, filename)
+    content_loc = StaticContent.compute_location(course_key, filename)
 
     chunked = upload_file.multiple_chunks()
     sc_partial = partial(StaticContent, content_loc, filename, mime_type)
@@ -232,7 +223,7 @@ def _upload_asset(request, location):
 @require_http_methods(("DELETE", "POST", "PUT"))
 @login_required
 @ensure_csrf_cookie
-def _update_asset(request, location, asset_path_encoding):
+def _update_asset(request, course_key, asset_path_encoding):
     """
     restful CRUD operations for a course asset.
     Currently only DELETE, POST, and PUT methods are implemented.
@@ -247,8 +238,8 @@ def _update_asset(request, location, asset_path_encoding):
             # return a 'Bad Request' to browser as we have a malformed Location
             return JsonResponse({"error": err.message}, status=400)
 
+    asset_key = get_asset_location(asset_path_encoding)
     if request.method == 'DELETE':
-        asset_key = AssetKey.from_string(asset_id)
         # Make sure the item to delete actually exists.
         try:
             content = contentstore().find(asset_key)
@@ -278,14 +269,13 @@ def _update_asset(request, location, asset_path_encoding):
 
     elif request.method in ('PUT', 'POST'):
         if 'file' in request.FILES:
-            return _upload_asset(request, location)
+            return _upload_asset(request, course_key)
         else:
             # Update existing asset
             try:
                 modified_asset = json.loads(request.body)
             except ValueError:
                 return HttpResponseBadRequest()
-            asset_id = AssetKey.from_string(modified_asset['url'])
             contentstore().set_attr(asset_key, 'locked', modified_asset['locked'])
             # Delete the asset from the cache so we check the lock status the next time it is requested.
             del_cached_content(asset_key)

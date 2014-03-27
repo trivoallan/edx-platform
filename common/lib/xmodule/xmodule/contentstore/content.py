@@ -1,4 +1,5 @@
 import bson.son
+import re
 XASSET_LOCATION_TAG = 'c4x'
 XASSET_SRCREF_PREFIX = 'xasset:'
 
@@ -9,7 +10,7 @@ import logging
 import StringIO
 from urlparse import urlparse, urlunparse
 
-from xmodule.modulestore.locations import AssetLocation, SlashSeparatedCourseKey
+from xmodule.modulestore.locations import AssetLocation, SlashSeparatedCourseKey, Location
 from .django import contentstore
 from PIL import Image
 
@@ -59,10 +60,20 @@ class StaticContent(object):
     def data(self):
         return self._data
 
+    ASSET_URL_RE = re.compile(r"""
+        /?c4x/
+        (?P<org>[^/]+)/
+        (?P<course>[^/]+)/
+        (?P<category>[^/]+)/
+        (?P<name>[^/]+)
+    """, re.VERBOSE | re.IGNORECASE)
+
+    ASSET_URL_FORMAT = u"/c4x/{0.org}/{0.course}/{0.category}/{0.name}"
+
     @staticmethod
     def get_url_path_from_location(location):
         if location is not None:
-            return u"/c4x/{0.org}/{0.course}/{0.category}/{0.name}".format(location)
+            return StaticContent.ASSET_URL_FORMAT.format(location)
         else:
             return None
 
@@ -71,7 +82,7 @@ class StaticContent(object):
         """
         Returns a boolean if a path is believed to be a c4x link based on the leading element
         """
-        return path_string.startswith(u'/{0}/'.format(XASSET_LOCATION_TAG))
+        return StaticContent.ASSET_URL_RE.match(path_string) is not None
 
     @staticmethod
     def get_static_path_from_location(location):
@@ -83,7 +94,7 @@ class StaticContent(object):
         the actual /c4x/... path which the client needs to reference static content
         """
         if location is not None:
-            return u"/static/{name}".format(**location.dict())
+            return u"/static/{name}".format(name=location.name)
         else:
             return None
 
@@ -93,10 +104,13 @@ class StaticContent(object):
             return None
 
         assert(isinstance(course_key, SlashSeparatedCourseKey))
-        return u"/c4x/{org}/{course}/asset/".format(org=course_key.org, course=course_key.course)
+        return StaticContent.get_url_path_from_location(course_key.make_usage_key('asset', ''))
 
     @staticmethod
     def get_id_from_location(location):
+        """
+        Get the doc store's primary key repr for this location
+        """
         return bson.son.SON([
             ('tag', 'c4x'), ('org', location.org), ('course', location.course),
             ('category', location.category), ('name', location.name),
@@ -104,15 +118,12 @@ class StaticContent(object):
         ])
 
     @staticmethod
-    def get_location_from_path(path, course_key):
-        # remove leading / character if it is there one
-        if path.startswith('/'):
-            path = path[1:]
-        if path.startswith('c4x/'):
-            # convert to old url syntax
-            path = 'c4x://' + path[4:]
-
-        return course_key.make_usage_key_from_deprecated_string(path)
+    def get_location_from_path(path):
+        """
+        Generate an AssetKey for the given path (old c4x/org/course/asset/name syntax)
+        """
+        matched = StaticContent.ASSET_URL_RE.match(path)
+        return Location(matched['org'], matched['course'], None, matched['category'], matched['name'])
 
     @staticmethod
     def convert_legacy_static_url_with_course_id(path, course_id):
@@ -120,7 +131,6 @@ class StaticContent(object):
         Returns a path to a piece of static content when we are provided with a filepath and
         a course_id
         """
-
         # Generate url of urlparse.path component
         scheme, netloc, orig_path, params, query, fragment = urlparse(path)
         loc = StaticContent.compute_location(course_id, orig_path)

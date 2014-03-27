@@ -584,7 +584,7 @@ class ContentStoreToyCourseTest(ModuleStoreTestCase):
 
         content = None
         try:
-            location = StaticContent.get_location_from_path('/c4x/edX/toy/asset/sample_static.txt', course.id)
+            location = StaticContent.get_location_from_path('/c4x/edX/toy/asset/sample_static.txt')
             content = content_store.find(location)
         except NotFoundError:
             pass
@@ -610,8 +610,7 @@ class ContentStoreToyCourseTest(ModuleStoreTestCase):
         This test will exercise the soft delete/restore functionality of the assets
         '''
         content_store, trash_store, thumbnail_location = self._delete_asset_in_course()
-        course_key = CourseKey.from_string('edX/toy/2012_Fall')
-        asset_location = StaticContent.get_location_from_path('/c4x/edX/toy/asset/sample_static.txt', course_key)
+        asset_location = StaticContent.get_location_from_path('/c4x/edX/toy/asset/sample_static.txt')
 
         # now try to find it in store, but they should not be there any longer
         content = content_store.find(asset_location, throw_on_not_found=False)
@@ -655,9 +654,7 @@ class ContentStoreToyCourseTest(ModuleStoreTestCase):
         _, course_items = import_from_xml(module_store, 'common/test/data/', ['toy'], static_content_store=content_store)
 
         # look up original (and thumbnail) in content store, should be there after import
-        location = StaticContent.get_location_from_path(
-            '/c4x/edX/toy/asset/sample_static.txt', course_items[0].location.course_key
-        )
+        location = StaticContent.get_location_from_path('/c4x/edX/toy/asset/sample_static.txt')
         content = content_store.find(location, throw_on_not_found=False)
         thumbnail_location = content.thumbnail_location
         self.assertIsNotNone(content)
