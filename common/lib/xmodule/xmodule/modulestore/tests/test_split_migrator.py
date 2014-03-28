@@ -28,7 +28,6 @@ class TestMigration(SplitWMongoCourseBoostrapper):
         dbref = self.loc_mapper.db
         dbref.drop_collection(self.loc_mapper.location_map)
         super(TestMigration, self).tearDown()
-        dbref.connection.close()
 
     def _create_course(self):
         """
@@ -60,10 +59,11 @@ class TestMigration(SplitWMongoCourseBoostrapper):
             both_vert_loc.category, both_vert_loc.name, {}, {'display_name': 'Both vertical'}, 'chapter', chapter1_name, 
             draft=False, split=False
         )
+        self.create_random_units(False, both_vert_loc)
         draft_both = self.draft_mongo.get_item(both_vert_loc)
         draft_both.display_name = 'Both vertical renamed'
         self.draft_mongo.update_item(draft_both)
-        self.create_random_units(True, both_vert_loc, True)
+        self.create_random_units(True, both_vert_loc)
         # vertical in draft only (x2)
         draft_vert_loc = self.old_course_key.make_usage_key('vertical', uuid.uuid4().hex)
         self._create_item(
@@ -134,12 +134,11 @@ class TestMigration(SplitWMongoCourseBoostrapper):
             None, None, draft=False, split=False
         )
 
-    def create_random_units(self, draft, parent_loc, cc_store=False):
+    def create_random_units(self, draft, parent_loc):
         """
         Create a random selection of units under the given parent w/ random names & attrs
         :param store: which store (e.g., direct/draft) to create them in
         :param parent: the parent to have point to them
-        :param cc_store: (optional) if given, make a small change and save also to this store but w/ same location
         (only makes sense if store is 'direct' and this is 'draft' or vice versa)
         """
         for _ in range(random.randrange(6)):
@@ -153,13 +152,6 @@ class TestMigration(SplitWMongoCourseBoostrapper):
                 location.category, location.name, data, metadata, parent_loc.category, parent_loc.name,
                 draft=draft, split=False
             )
-            if cc_store:
-                # change display_name and remove graded to test the delta
-                self._create_item(
-                    location.category, location.name, data, {'display_name': str(uuid.uuid4())},
-                    None, None,  # already attached to parent, don't do it again
-                    draft=not draft, split=False
-                )
 
     def compare_courses(self, presplit, published):
         # descend via children to do comparison

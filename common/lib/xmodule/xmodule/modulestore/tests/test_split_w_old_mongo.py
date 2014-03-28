@@ -49,6 +49,7 @@ class SplitWMongoCourseBoostrapper(unittest.TestCase):
             self.db_config,
             **self.modulestore_options
         )
+        self.addCleanup(self.split_mongo.db.connection.close)
         self.addCleanup(self.tear_down_split)
         self.old_mongo = MongoModuleStore(self.db_config, **self.modulestore_options)
         self.draft_mongo = DraftMongoModuleStore(self.db_config, **self.modulestore_options)
@@ -64,7 +65,6 @@ class SplitWMongoCourseBoostrapper(unittest.TestCase):
         split_db.drop_collection(split_db.course_index)
         split_db.drop_collection(split_db.structures)
         split_db.drop_collection(split_db.definitions)
-        split_db.connection.close()
 
     def tear_down_mongo(self):
         """
@@ -73,7 +73,6 @@ class SplitWMongoCourseBoostrapper(unittest.TestCase):
         split_db = self.split_mongo.db
         # old_mongo doesn't give a db attr, but all of the dbs are the same
         split_db.drop_collection(self.old_mongo.collection)
-        split_db.connection.close()
 
     def _create_item(self, category, name, data, metadata, parent_category, parent_name, draft=True, split=True):
         """
