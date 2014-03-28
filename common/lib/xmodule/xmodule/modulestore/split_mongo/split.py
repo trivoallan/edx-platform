@@ -270,8 +270,8 @@ class SplitMongoModuleStore(ModuleStoreWriteBase):
         # and the one assoc'd w/ it by another fetch may not be the one relevant to this fetch; so,
         # add it in the envelope for the structure.
         envelope = {
-            'org': index['org'],
-            'offering': index['offering'],
+            'org': course_locator.org,
+            'offering': course_locator.offering,
             'branch': course_locator.branch,
             'structure': entry,
         }
