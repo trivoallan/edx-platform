@@ -11,7 +11,7 @@ from datetime import datetime
 from xmodule.exceptions import InvalidVersionError
 from xmodule.modulestore import Location
 from xmodule.modulestore.exceptions import ItemNotFoundError, DuplicateItemError
-from xmodule.modulestore.mongo.base import location_to_query, location_to_son, get_course_id_no_run, MongoModuleStore
+from xmodule.modulestore.mongo.base import location_to_query, location_to_son, MongoModuleStore
 import pymongo
 from pytz import UTC
 
@@ -156,7 +156,7 @@ class DraftModuleStore(MongoModuleStore):
         """
         draft_loc = as_draft(xblock.location)
         try:
-            if not self.has_item(None, draft_loc):
+            if not self.has_item(draft_loc):
                 self.convert_to_draft(xblock.location)
         except ItemNotFoundError:
             if not allow_not_found:
@@ -220,9 +220,9 @@ class DraftModuleStore(MongoModuleStore):
         self.convert_to_draft(location)
         super(DraftModuleStore, self).delete_item(location)
 
-    def _query_children_for_cache_children(self, items):
+    def _query_children_for_cache_children(self, course_key, items):
         # first get non-draft in a round-trip
-        to_process_non_drafts = super(DraftModuleStore, self)._query_children_for_cache_children(items)
+        to_process_non_drafts = super(DraftModuleStore, self)._query_children_for_cache_children(course_key, items)
 
         to_process_dict = {}
         for non_draft in to_process_non_drafts:
@@ -230,7 +230,10 @@ class DraftModuleStore(MongoModuleStore):
 
         # now query all draft content in another round-trip
         query = {
-            '_id': {'$in': [location_to_son(as_draft(Location(item))) for item in items]}
+            '_id': {'$in': [
+                location_to_son(as_draft(course_key.make_usage_key_from_deprecated_string(item)))
+                for item in items
+            ]}
         }
         to_process_drafts = list(self.collection.find(query))
 
