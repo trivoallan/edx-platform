@@ -212,9 +212,10 @@ class TestMigration(SplitWMongoCourseBoostrapper):
         # compare children
         if presplit_dag_root.has_children:
             self.assertEqual(
-                len(presplit_dag_root.get_children()), len(split_dag_root.get_children()),
-                "{0.category} '{0.display_name}': children count {1} != {2}".format(
-                    presplit_dag_root, len(presplit_dag_root.get_children()), split_dag_root.children
+                # need get_children to filter out drafts
+                len(presplit_dag_root.get_children()), len(split_dag_root.children),
+                "{0.category} '{0.display_name}': children  {1} != {2}".format(
+                    presplit_dag_root, presplit_dag_root.children, split_dag_root.children
                 )
             )
             for pre_child, split_child in zip(presplit_dag_root.get_children(), split_dag_root.get_children()):
