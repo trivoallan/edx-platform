@@ -237,11 +237,15 @@ class XModuleMixin(XBlockMixin):
         if not self.has_children:
             return []
 
+        course_key = self.location.course_key
+        usage_generator = getattr(
+            course_key, 'make_usage_key_from_deprecated_string',
+            lambda block_id: course_key.make_usage_key(None, block_id)
+        )
         if getattr(self, '_child_instances', None) is None:
             self._child_instances = []  # pylint: disable=attribute-defined-outside-init
-            course_key = self.location.course_key
             for child_loc in self.children:
-                child_i4x = course_key.make_usage_key_from_deprecated_string(child_loc)
+                child_i4x = usage_generator(child_loc)
                 try:
                     child = self.runtime.get_block(child_i4x)
                     child.runtime.export_fs = self.runtime.export_fs

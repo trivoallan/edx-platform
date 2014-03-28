@@ -113,15 +113,8 @@ class DraftModuleStore(MongoModuleStore):
                 ``name`` is another commonly provided key (Location based stores)
         """
         draft_items = super(DraftModuleStore, self).get_items(course_key, revision='draft', **kwargs)
-        items = super(DraftModuleStore, self).get_items(course_key, **kwargs)
+        non_draft_items = super(DraftModuleStore, self).get_items(course_key, revision=None, **kwargs)
 
-        draft_locs_found = set(item.location.replace(revision=None) for item in draft_items)
-        non_draft_items = [
-            item
-            for item in items
-            if (item.location.revision != DRAFT
-                and item.location.replace(revision=None) not in draft_locs_found)
-        ]
         return [wrap_draft(item) for item in draft_items + non_draft_items]
 
     def convert_to_draft(self, source_location):

@@ -608,14 +608,17 @@ class MongoModuleStore(ModuleStoreWriteBase):
         ])
 
 
-    def get_items(self, course_id, settings=None, content=None, **kwargs):
+    def get_items(self, course_id, settings=None, content=None, revision=None, **kwargs):
         """
         Returns:
             list of XModuleDescriptor instances for the matching items within the course with
             the given course_id
 
         NOTE: don't use this to look for courses
-        as the course_id is required. Use get_courses.
+        as the course_id is required. Use get_courses which is a lot faster anyway.
+
+        If you don't provide a value for revision, this limits the result to only ones in the
+        published course. Call this method on draft mongo store if you want to include drafts.
 
         Args:
             course_id (CourseKey): the course identifier
@@ -632,7 +635,8 @@ class MongoModuleStore(ModuleStoreWriteBase):
                 update_version info.
         """
         query = self._course_key_to_son(course_id)
-        for field in ['category', 'name', 'revision']:
+        query['_id.revision'] = revision
+        for field in ['category', 'name']:
             if field in kwargs:
                 query['_id.' + field] = kwargs.pop(field)
 
