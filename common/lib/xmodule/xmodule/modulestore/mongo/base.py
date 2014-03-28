@@ -866,9 +866,10 @@ class MongoModuleStore(ModuleStoreWriteBase):
     # pylint: disable=unused-argument
     def delete_item(self, location, **kwargs):
         """
-        Delete an item from this modulestore
+        Delete an item from this modulestore.
 
-        location: Something that can be passed to Location
+        Args:
+            location (UsageKey)
         """
         # pylint: enable=unused-argument
         # VS[compat] cdodge: This is a hack because static_tabs also have references from the course module, so

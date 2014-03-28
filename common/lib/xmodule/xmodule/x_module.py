@@ -239,9 +239,11 @@ class XModuleMixin(XBlockMixin):
 
         if getattr(self, '_child_instances', None) is None:
             self._child_instances = []  # pylint: disable=attribute-defined-outside-init
+            course_key = self.location.course_key
             for child_loc in self.children:
+                child_i4x = course_key.make_usage_key_from_deprecated_string(child_loc)
                 try:
-                    child = self.runtime.get_block(child_loc)
+                    child = self.runtime.get_block(child_i4x)
                     child.runtime.export_fs = self.runtime.export_fs
                 except ItemNotFoundError:
                     log.exception(u'Unable to load item {loc}, skipping'.format(loc=child_loc))
