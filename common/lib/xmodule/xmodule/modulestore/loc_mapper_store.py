@@ -84,10 +84,10 @@ class LocMapperStore(object):
         if org is None and offering is None:
             assert(isinstance(course_key, SlashSeparatedCourseKey))
             org = course_key.org
-            offering = "{0.course}.{0.run}".format(course_key)
+            offering = u"{0.course}.{0.run}".format(course_key)
         elif org is None or offering is None:
             raise ValueError(
-                "Either supply both org and offering or neither. Not just one: {}, {}".format(org, offering)
+                u"Either supply both org and offering or neither. Not just one: {}, {}".format(org, offering)
             )
 
         # very like _interpret_location_id but using mongo subdoc lookup (more performant)
