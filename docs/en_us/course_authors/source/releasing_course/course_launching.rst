@@ -6,7 +6,7 @@ Course Launching Activities
 
 To launch a course, you prepare the course itself, the staff, and the
 students. This chapter includes a :ref:`Course Launch Checklist` to use as a
-model for your own schedule of activities.
+model for your schedule of activities.
 
 To help you communicate to the staff and to all course participants when you
 are launching the course, and also while the course runs, you can send email
@@ -27,9 +27,9 @@ starts follow.
 
 **Verify Course Settings**
 
-* Verify the course start date and time in Studio. See :ref:`Set Important
+* Check the course start date and time in Studio. See :ref:`Set Important
   Dates for Your Course`.
-* Verify the grading policy, and set a grace period for homewark assignment
+* Review the grading policy, and set a grace period for homework assignment
   due dates. See :ref:`Establish a Grading Policy`.
 
 
@@ -38,7 +38,8 @@ starts follow.
 * Verify that all units are present and published. See :ref:`Units`.
 * Check all assignments for completeness and verify their due dates. See
   :ref:`Working with Problem Components`.
-* Verify that videos, transcripts, and download links are in place.
+* Verify that videos, transcripts, and download links are in place and
+  working.
 * Review feedback from the course team and beta testers to be sure that the
   content has been thoroughly reviewed and tested.
 
@@ -73,9 +74,9 @@ starts follow.
 * Verify that role assignments are complete for instructors and course staff.
   See :ref:`Course_Staffing`.
 * Verify that discussion admins, discussion moderators, and community TAs have
-  registered and activated user accounts, enrolled in the course, and been
+  registered and activated their user accounts, enrolled in the course, and been
   assigned their roles. See :ref:`Assigning_discussion_roles`.
-* Select methods for managing discussions, define guidance for discussion
+* Define methods for managing discussions and guidance for discussion
   moderators, and distribute to the discussion team. See
   :ref:`Moderating_discussions` and :ref:`Guidance for Discussion Moderators`.
 
@@ -137,7 +138,7 @@ To send an email message to course participants:
 
 #. Enter the message body. Messages can use HTML styling, including text
    formatting and links. The same options are available for your email
-   messages as for the Studio HTML Component. See :ref:`Working with HTML
+   messages as for the HTML Component in Studio. See :ref:`Working with HTML
    Components`.
 
 #. Click **Send Email**.  The status of the message displays in the **Pending
