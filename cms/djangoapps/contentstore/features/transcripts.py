@@ -206,11 +206,11 @@ def check_text_in_the_captions(_step, text):
 
 @step('I see value "([^"]*)" in the field "([^"]*)"$')
 def check_transcripts_field(_step, values, field_name):
-    world.click_link_by_text('Advanced')
+    world.click_link_by_text('ADVANCED')
     field_id = '#' + world.browser.find_by_xpath('//label[text()="%s"]' % field_name.strip())[0]['for']
     values_list = [i.strip() == world.css_value(field_id) for i in values.split('|')]
     assert any(values_list)
-    world.click_link_by_text('Basic')
+    world.click_link_by_text('BASIC')
 
 
 @step('I save changes$')
