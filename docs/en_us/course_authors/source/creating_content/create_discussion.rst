@@ -32,7 +32,7 @@ Create a Discussion Component
 .. note:: Before you create a Discussion component, consider that Discussion categories are immediately visible in your forum (on the Discussion tab for your course) when you create them, even though the unit that contains the Discussion component is set to Private.
 
 
-To create a new HTML component in an existing Unit, ensure the Unit is Private.  
+To create a new Discussion component in an existing Unit, ensure the Unit is Private.  
 For more information on Public and Private Units, see :ref:`Public and Private Units`.
 
 #. Under **Add New Component**, click the **discussion** icon.
