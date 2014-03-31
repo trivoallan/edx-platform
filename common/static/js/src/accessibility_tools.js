@@ -158,8 +158,7 @@ $(function(){
       };
 
       SRAlert.prototype.readElts = function(elts) {
-        var feedback,
-          _this = this;
+        var feedback;
         feedback = '';
         $.each(elts, function(idx, value) {
           return feedback += '<p>' + $(value).html() + '</p>\n';
