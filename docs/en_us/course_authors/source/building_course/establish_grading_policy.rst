@@ -144,20 +144,20 @@ You configure the following fields for each assignment type:
 Set the Assignment Type for Graded Subsections
 **********************************************
 After you configure assignment types, as you are organizing your course, 
-you set the assignment type for subsections that contain problems that are to be graded. Courses are organized to include sections and subsections. Each subsection that contains problems to be graded can include only one assignment type. See :ref:`subsections` for more information.
+you set the assignment type for subsections that contain problems that are to be graded. 
 
-.. note:: You can designate a Subsection as one, and only one, of the assignment types you configured. You can also set a due date.
+Each subsection that contains problems to be graded can include only one assignment type. See :ref:`subsections` for more information.
+
+.. note:: You can set the assignment type only for subsections. You cannot set separate assignment types for units within subsections, or for sections as a whole. Furthermore, you can designate a subsection as one, and only one, of the assignment types you configured. You can also set a due date for the subsection, but not individual units within the subsection.
   
-See :ref:`subsections` for general instructions on configuring a Subsection. See :ref:`Set the Grading Policy` for instructions on designating a subsection as a graded assignment.
+See :ref:`subsections` for general instructions on configuring a subsection. See :ref:`Set the Grading Policy` for instructions on designating a subsection as a graded assignment.
 
-Within a graded Subsection, you create problems of the type designated for that Subsection. 
-You should not mix problems of different assignment types in the same Subsection.
+Within a graded subsection, you create problems of the type designated for that subsection. 
+You should not mix problems of different assignment types in the same subsection.
 
-For example, if you want to create a homework assignment and a lab for a specific topic, create two Subsections. 
-Set one Subsection as the Homework assignment type and the other as the Lab assignment type. 
-Both Subsections can contain other content as well as the actual homework or lab problems.
+For example, if you want to create a homework assignment and a lab for a specific topic, create two subsections. Set one subsection as the Homework assignment type and the other as the Lab assignment type. Both subsections can contain other content as well as the actual homework or lab problems.
 
-.. note:: You can create problems in Studio without specifying that the Subsection is an assignment type. However, such problems will not count toward a student's grade.
+.. note:: You can create problems in Studio without specifying that the subsection is an assignment type. However, such problems will not count toward a student's grade.
 
 See :ref:`Working with Problem Components` for instructions on creating problems. 
 
@@ -206,7 +206,7 @@ You can also :ref:`Set the Grace Period` for your assignments to cover any misun
 Students see the due date in the course accordian under the subsection title. For example:
 
 .. image::  ../Images/Subsection_due_date.png
-  :alt: Image of subsection due dates in the course accordian
+  :alt: Image of subsection due dates in the course accordion
 
 There are several problems in this subsection, all due November 3, 2013 at 23:30 UTC.
 
@@ -223,5 +223,9 @@ Once a grading policy is in place, students can view both their problem scores a
   .. image:: ../Images/Progress_tab.png
     :width: 800
     :alt: Image of the student Progress tab
+
+Each item in the X axis of the chart is for a graded subsection. Graded problems in units are not broken out in the chart; the score from each problem in the subsection is added to that vertical bar. 
+
+Graded subsections are grouped in the chart by the assignment type, not chronological order. For example, all homework exercises are grouped together, followed by labs, then exams.
 
 .. note:: The **x** for an assignment in the Progress tab indicates that the assignment grade is currently dropped. You configure how many assignments are dropped when you :ref:`Configure the Assignment Types`.
