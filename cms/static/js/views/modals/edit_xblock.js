@@ -28,9 +28,23 @@ define(["jquery", "underscore", "gettext", "js/views/modals/base_modal",
                 this.xblockElement = xblockElement;
                 this.xblockInfo = this.findXBlockInfo(xblockElement, rootXBlockInfo);
                 this.editOptions = options;
-                this.render({
+                this.render();
+                this.show();
+                // Display the xblock after the modal is shown as there are some xblocks
+                // that depend upon being visible when they initialize, e.g. the problem xmodule.
+                this.displayXBlock({
                     success: _.bind(this.onRender, this)
                 });
+            },
+
+            displayXBlock: function(options) {
+                var xblockInfo = this.xblockInfo,
+                    editorView = new XBlockEditorView({
+                        el: this.$('.xblock-editor'),
+                        model: xblockInfo
+                    });
+                this.editorView = editorView;
+                editorView.render(options);
             },
 
             render: function(options) {
@@ -41,12 +55,6 @@ define(["jquery", "underscore", "gettext", "js/views/modals/base_modal",
                 this.$el.html(this.template({
                     xblockInfo: xblockInfo
                 }));
-                editorView = new XBlockEditorView({
-                    el: this.$('.xblock-editor'),
-                    model: xblockInfo
-                });
-                this.editorView = editorView;
-                editorView.render(options);
             },
 
             onRender: function() {

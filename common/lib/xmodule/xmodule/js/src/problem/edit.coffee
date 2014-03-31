@@ -12,7 +12,6 @@ class @MarkdownEditingDescriptor extends XModule.Descriptor
     @element = element
 
     if $(".markdown-box", @element).length != 0
-      debugger
       @markdown_editor = CodeMirror.fromTextArea($(".markdown-box", element)[0], {
       lineWrapping: true
       mode: null
