@@ -405,7 +405,7 @@ class SplitMongoModuleStore(ModuleStoreWriteBase):
             # do the checks which don't require loading any additional data
             if (
                 self._block_matches(block_json, kwargs) and
-                self._block_matches(block_json.get('fields', {}), settings or {})
+                self._block_matches(block_json.get('fields', {}), settings)
             ):
                 if content:
                     definition_block = self.db_connection.get_definition(block_json['definition'])
@@ -413,6 +413,8 @@ class SplitMongoModuleStore(ModuleStoreWriteBase):
                 else:
                     return True
 
+        if settings is None:
+            settings = {}
         if 'name' in kwargs:
             # odd case where we don't search just confirm
             block_id = kwargs.pop('name')
@@ -421,6 +423,9 @@ class SplitMongoModuleStore(ModuleStoreWriteBase):
                 return self._load_items(course, [block_id], lazy=True)
             else:
                 return []
+        # don't expect caller to know that children are in fields
+        if 'children' in kwargs:
+            settings['children'] = kwargs.pop('children')
         for block_id, value in course['structure']['blocks'].iteritems():
             if _block_matches_all(value):
                 items.append(block_id)

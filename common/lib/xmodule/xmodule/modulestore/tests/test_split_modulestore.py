@@ -838,7 +838,7 @@ class SplitModuleItemTests(SplitModuleTest):
         matches = modulestore().get_items(
             locator,
             category ='chapter',
-            display_name=re.compile(r'Hera'),
+            settings={'display_name': re.compile(r'Hera')},
         )
         self.assertEqual(len(matches), 2)
 
