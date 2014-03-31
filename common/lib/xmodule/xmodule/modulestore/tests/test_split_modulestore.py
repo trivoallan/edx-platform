@@ -805,23 +805,21 @@ class SplitModuleItemTests(SplitModuleTest):
         self.assertFalse(modulestore()._value_matches('help', 'Help'))
         self.assertTrue(modulestore()._value_matches(['distract', 'help', 'notme'], 'help'))
         self.assertFalse(modulestore()._value_matches(['distract', 'Help', 'notme'], 'help'))
-        self.assertFalse(modulestore()._value_matches({'field': ['distract', 'Help', 'notme']}, {'field': 'help'}))
-        self.assertFalse(modulestore()._value_matches(['distract', 'Help', 'notme'], {'field': 'help'}))
-        self.assertTrue(modulestore()._value_matches(
+        self.assertFalse(modulestore()._block_matches({'field': ['distract', 'Help', 'notme']}, {'field': 'help'}))
+        self.assertTrue(modulestore()._block_matches(
             {'field': ['distract', 'help', 'notme'],
                 'irrelevant': 2},
             {'field': 'help'}))
-        self.assertTrue(modulestore()._value_matches('I need some help', {'$regex': 'help'}))
-        self.assertTrue(modulestore()._value_matches(['I need some help', 'today'], {'$regex': 'help'}))
-        self.assertFalse(modulestore()._value_matches('I need some help', {'$regex': 'Help'}))
-        self.assertFalse(modulestore()._value_matches(['I need some help', 'today'], {'$regex': 'Help'}))
+        self.assertTrue(modulestore()._value_matches('I need some help', re.compile(r'help')))
+        self.assertTrue(modulestore()._value_matches(['I need some help', 'today'], re.compile(r'help')))
+        self.assertFalse(modulestore()._value_matches('I need some help', re.compile(r'Help')))
+        self.assertTrue(modulestore()._value_matches(['I need some help', 'today'], re.compile(r'Help', re.IGNORECASE)))
 
         self.assertTrue(modulestore()._block_matches({'a': 1, 'b': 2}, {'a': 1}))
-        self.assertTrue(modulestore()._block_matches({'a': 1, 'b': 2}, {'c': None}))
-        self.assertTrue(modulestore()._block_matches({'a': 1, 'b': 2}, {'a': 1, 'c': None}))
         self.assertFalse(modulestore()._block_matches({'a': 1, 'b': 2}, {'a': 2}))
         self.assertFalse(modulestore()._block_matches({'a': 1, 'b': 2}, {'c': 1}))
         self.assertFalse(modulestore()._block_matches({'a': 1, 'b': 2}, {'a': 1, 'c': 1}))
+        self.assertTrue(modulestore()._block_matches({'a': 1, 'b': 2}, {'a': lambda i: 0 < i < 2}))
 
     def test_get_items(self):
         '''
@@ -839,15 +837,12 @@ class SplitModuleItemTests(SplitModuleTest):
         self.assertEqual(len(matches), 0)
         matches = modulestore().get_items(
             locator,
-            qualifiers=
-            {
-                'category': 'chapter',
-                'fields': {'display_name': {'$regex': 'Hera'}}
-            }
+            category ='chapter',
+            display_name=re.compile(r'Hera'),
         )
         self.assertEqual(len(matches), 2)
 
-        matches = modulestore().get_items(locator, qualifiers={'fields': {'children': 'chapter2'}})
+        matches = modulestore().get_items(locator, children='chapter2')
         self.assertEqual(len(matches), 1)
         self.assertEqual(matches[0].location.block_id, 'head12345')
 
@@ -946,7 +941,7 @@ class TestItemCrud(SplitModuleTest):
         self.assertEqual(new_module.display_name, 'new sequential')
         # check that block does not exist in previous version
         locator = BlockUsageLocator(
-            version_guid=premod_course.location.version_guid,
+            CourseLocator(version_guid=premod_course.location.version_guid),
             block_id=new_module.location.block_id
         )
         self.assertRaises(ItemNotFoundError, modulestore().get_item, locator)
@@ -964,7 +959,7 @@ class TestItemCrud(SplitModuleTest):
         locator = BlockUsageLocator(
             CourseLocator(org='testx', offering='wonderful', branch='draft'), 'head23456'
         )
-        premod_course = modulestore().get_course(locator)
+        premod_course = modulestore().get_course(locator.course_key)
         category = 'chapter'
         new_module = modulestore().create_item(
             locator, category, 'user123',
@@ -1154,13 +1149,13 @@ class TestItemCrud(SplitModuleTest):
         self.assertEqual(updated_problem.max_attempts, 4)
         # refetch to ensure original didn't change
         original_location = BlockUsageLocator(
-            version_guid=pre_version_guid,
+            CourseLocator(version_guid=pre_version_guid),
             block_id=problem.location.block_id
         )
         problem = modulestore().get_item(original_location)
         self.assertNotEqual(problem.max_attempts, 4, "original changed")
 
-        current_course = modulestore().get_course(locator)
+        current_course = modulestore().get_course(locator.course_key)
         self.assertEqual(updated_problem.location.version_guid, current_course.location.version_guid)
 
         history_info = modulestore().get_course_history_info(current_course.location)
@@ -1262,19 +1257,15 @@ class TestItemCrud(SplitModuleTest):
 
     def test_delete_item(self):
         course = self.create_course_for_deletion()
-        self.assertRaises(ValueError,
-                          modulestore().delete_item,
-                          course.location,
-                          'deleting_user')
-        reusable_location = course.location.replace(
-            course_key=course.id.replace(branch='draft')
-        )
+        with self.assertRaises(ValueError):
+            modulestore().delete_item(course.location, 'deleting_user')
+        reusable_location = course.id.version_agnostic().for_branch('draft')
 
         # delete a leaf
-        problems = modulestore().get_items(reusable_location, {'category': 'problem'})
+        problems = modulestore().get_items(reusable_location, category='problem')
         locn_to_del = problems[0].location
         new_course_loc = modulestore().delete_item(locn_to_del, 'deleting_user', delete_children=False)
-        deleted = reusable_location.replace(block_id=locn_to_del.block_id)
+        deleted = locn_to_del.version_agnostic()
         self.assertFalse(modulestore().has_item(deleted))
         with self.assertRaises(VersionConflictError):
             modulestore().has_item(locn_to_del)
@@ -1287,7 +1278,7 @@ class TestItemCrud(SplitModuleTest):
         self.assertNotEqual(new_course_loc.version_guid, course.location.version_guid)
 
         # delete a subtree
-        nodes = modulestore().get_items(reusable_location, {'category': 'chapter'})
+        nodes = modulestore().get_items(reusable_location, category='chapter')
         new_course_loc = modulestore().delete_item(nodes[0].location, 'deleting_user', delete_children=True)
         # check subtree
 
@@ -1325,7 +1316,7 @@ class TestItemCrud(SplitModuleTest):
         """
         course = modulestore().create_course('nihilx', 'deletion', 'deleting_user')
         root = BlockUsageLocator(
-            course.id.replace(branch='draft'),
+            course.id.version_agnostic().for_branch('draft'),
             block_id=course.location.block_id,
         )
         for _ in range(4):
@@ -1338,7 +1329,7 @@ class TestItemCrud(SplitModuleTest):
         """
         if not category_queue:
             return
-        node = modulestore().create_item(parent, category_queue[0], 'deleting_user')
+        node = modulestore().create_item(parent.version_agnostic(), category_queue[0], 'deleting_user')
         node_loc = BlockUsageLocator(parent.course_key, block_id=node.location.block_id)
         for _ in range(4):
             self.create_subtree_for_deletion(node_loc, category_queue[1:])
@@ -1403,7 +1394,7 @@ class TestCourseCreation(SplitModuleTest):
             new_draft.location, 'chapter', 'leech_master',
             fields={'display_name': 'new chapter'}
         )
-        new_draft_locator = new_draft_locator.version_agnostic()
+        new_draft_locator = new_draft_locator.course_key.version_agnostic()
         new_index = modulestore().get_course_index_info(new_draft_locator)
         self.assertNotEqual(new_index['versions']['draft'], original_index['versions']['draft'])
         new_draft = modulestore().get_course(new_draft_locator)
@@ -1415,11 +1406,6 @@ class TestCourseCreation(SplitModuleTest):
 
         original_course = modulestore().get_course(original_locator)
         self.assertEqual(original_course.location.version_guid, original_index['versions']['draft'])
-        self.assertFalse(
-            modulestore().has_item(BlockUsageLocator(
-                block_id=new_item.location.block_id
-            ))
-        )
 
     def test_derived_course(self):
         """
@@ -1457,19 +1443,12 @@ class TestCourseCreation(SplitModuleTest):
 
     def test_update_course_index(self):
         """
-        Test changing the org, pretty id, etc of a course. Test that it doesn't allow changing the id, etc.
+        Test the versions pointers. NOTE: you can change the org, offering, or other things, but
+        it's not clear how you'd find them again or associate them w/ existing student history since
+        we use course_key so many places as immutable.
         """
         locator = CourseLocator(org='testx', offering='GreekHero', branch='draft')
         course_info = modulestore().get_course_index_info(locator)
-        course_info['org'] = 'funkyU'
-        modulestore().update_course_index(course_info)
-        course_info = modulestore().get_course_index_info(locator)
-        self.assertEqual(course_info['org'], 'funkyU')
-
-        course_info['org'] = 'moreFunky'
-        modulestore().update_course_index(course_info)
-        course_info = modulestore().get_course_index_info(locator)
-        self.assertEqual(course_info['org'], 'moreFunky')
 
         # an allowed but not necessarily recommended way to revert the draft version
         head_course = modulestore().get_course(locator)

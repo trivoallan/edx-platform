@@ -393,10 +393,8 @@ class SplitMongoModuleStore(ModuleStoreWriteBase):
                 Common qualifiers are ``category`` or any field name. if the target field is a list,
                 then it searches for the given value in the list not list equivalence.
                 Substring matching pass a regex object.
-                For some modulestores, ``name`` is another commonly provided key (Location based stores)
-                For some modulestores,
-                you can search by ``edited_by``, ``edited_on`` providing either a datetime for == (probably
-                useless) or a tuple (">"|"<" datetime) for after or before, etc.
+                For split,
+                you can search by ``edited_by``, ``edited_on`` providing a function testing limits.
         """
         course = self._lookup_course(course_locator)
         items = []
