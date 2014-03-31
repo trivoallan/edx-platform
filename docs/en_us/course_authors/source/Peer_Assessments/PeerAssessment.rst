@@ -12,6 +12,8 @@ Introduction to Peer Assessments
 
 Peer assessments allow instructors to assign questions that may not have definite answers. Students submit a response to a question, and then compare their peers' responses to a rubric that you create. Peer assessment problems also include self assessments, in which students compare their own responses to the rubric.
 
+Student responses to peer assessment assignments can contain up to 10,000 words, or 20 single-spaced pages.
+
 .. _PA Elements:
 
 ================================
