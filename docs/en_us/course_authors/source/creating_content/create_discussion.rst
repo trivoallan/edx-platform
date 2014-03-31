@@ -57,6 +57,8 @@ For more information on Public and Private Units, see :ref:`Public and Private U
   
 #. Click **Save**.
 
+.. note:: For a Discussion component to be visible in the **Discussion** tab's topic drop-down list, the unit must be published and the section and subsection must have a release date in the past. See :ref:`Publishing Your Course` for more information.
+
 .. _A Student's View of the Discussion:
 
 **********************************
