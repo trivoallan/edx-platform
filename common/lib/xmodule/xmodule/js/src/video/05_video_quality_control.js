@@ -12,7 +12,7 @@ function () {
 
         // Changing quality for now only works for YouTube videos.
         if (state.videoType !== 'youtube') {
-            state.el.find('a.quality_control').remove();
+            state.el.find('a.quality-control').remove();
             return;
         }
 
@@ -50,7 +50,7 @@ function () {
     //     make the created DOM elements available via the 'state' object. Much easier to work this
     //     way - you don't have to do repeated jQuery element selects.
     function _renderElements(state) {
-        state.videoQualityControl.el = state.el.find('a.quality_control');
+        state.videoQualityControl.el = state.el.find('a.quality-control');
 
         state.videoQualityControl.el.show();
         state.videoQualityControl.quality = null;
@@ -72,9 +72,8 @@ function () {
     function qualitiesAreAvailable() {
         // HD qualities are avaible, enable the HD control.
         if (this.config.hasHDQualities) {
-            this.videoQualityControl.el
-                                    .removeClass('disabled')
-                                    .attr('href', '#');
+            this.videoQualityControl.el.removeClass('is-disabled')
+                                       .attr('href', '#');
         }
     }
 

@@ -22,7 +22,7 @@ function (HTML5Video, Resizer) {
             log: log,
             onCaptionSeek: onSeek,
             onEnded: onEnded,
-            onFetchAvailableQualities: onFetchAvailableQualities,
+            onFetchAvailableQualities: _.once(onFetchAvailableQualities),
             onPause: onPause,
             onPlay: onPlay,
             onPlaybackQualityChange: onPlaybackQualityChange,
@@ -661,10 +661,9 @@ function (HTML5Video, Resizer) {
                 this.videoPlayer.onUnstarted();
                 break;
             case this.videoPlayer.PlayerState.PLAYING:
-                if (this.config.availableLDQualities.length === 0 &&
-                    this.config.availableHDQualities.length === 0) {
-                    this.videoPlayer.onFetchAvailableQualities();
-                }
+                // onFetchAvailableQualities can only be called once as _.once
+                // has been used.
+                this.videoPlayer.onFetchAvailableQualities();
                 this.videoPlayer.onPlay();
                 break;
             case this.videoPlayer.PlayerState.PAUSED:
