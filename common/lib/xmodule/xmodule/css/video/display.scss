@@ -547,6 +547,12 @@ div.video {
             color: #0ff;
             text-decoration: none;
           }
+
+          &.disabled {
+            background-color: #999;
+            text-decoration: none;
+            cursor: default;
+          }
         }
 
         div.lang {

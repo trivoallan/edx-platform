@@ -37,6 +37,7 @@ function () {
     function _makeFunctionsPublic(state) {
         var methodsDict = {
             onQualityChange: onQualityChange,
+            qualitiesAreAvailable: qualitiesAreAvailable,
             toggleQuality: toggleQuality
         };
 
@@ -68,11 +69,20 @@ function () {
     // The magic private function that makes them available and sets up their context is makeFunctionsPublic().
     // ***************************************************************
 
+    function qualitiesAreAvailable() {
+        // HD qualities are avaible, enable the HD control.
+        if (this.config.hasHDQualities) {
+            this.videoQualityControl.el
+                                    .removeClass('disabled')
+                                    .attr('href', '#');
+        }
+    }
+
     function onQualityChange(value) {
         var controlStateStr;
         this.videoQualityControl.quality = value;
 
-        if (_.indexOf(this.config.availableQualities, value) !== -1) {
+        if (_.indexOf(this.config.availableHDQualities, value) !== -1) {
             controlStateStr = gettext('HD on');
             this.videoQualityControl.el
                                     .addClass('active')
@@ -88,25 +98,23 @@ function () {
         }
     }
 
-    // This function change quality of video.
-    // Right now we haven't ability to choose quality of HD video,
-    // 'hd720' will be played by default as HD video(this thing is hardcoded).
-    // If suggested quality level is not available for the video,
-    // then the quality will be set to the next lowest level that is available.
-    // (large -> medium)
+    // This function toggles the quality of video only if HD qualities are
+    // available.
     function toggleQuality(event) {
-        var newQuality,
-            value = this.videoQualityControl.quality;
+        var newQuality, value = this.videoQualityControl.quality;
 
         event.preventDefault();
 
-        if (_.indexOf(this.config.availableQualities, value) !== -1) {
-            newQuality = 'large';
-        } else {
-            newQuality = 'hd720';
+        // The LD and HD qualities are ordered from highest to lowest quality
+        // like the array that player.getAvailableQualityLevels() returns.
+        if (this.config.hasHDQualities) {
+            if (_.contains(this.config.availableLDQualities, value)) {
+                newQuality = _.first(this.config.availableHDQualities);
+            } else {
+                newQuality = _.first(this.config.availableLDQualities);
+            }
+            this.trigger('videoPlayer.handlePlaybackQualityChange', newQuality);
         }
-
-        this.trigger('videoPlayer.handlePlaybackQualityChange', newQuality);
     }
 
 });

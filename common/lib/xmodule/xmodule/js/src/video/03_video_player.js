@@ -22,6 +22,7 @@ function (HTML5Video, Resizer) {
             log: log,
             onCaptionSeek: onSeek,
             onEnded: onEnded,
+            onFetchAvailableQualities: onFetchAvailableQualities,
             onPause: onPause,
             onPlay: onPlay,
             onPlaybackQualityChange: onPlaybackQualityChange,
@@ -463,6 +464,21 @@ function (HTML5Video, Resizer) {
         this.el.trigger('ended', arguments);
     }
 
+    function onFetchAvailableQualities() {
+        var qualities = this.videoPlayer.player.getAvailableQualityLevels();
+
+        this.config.availableHDQualities =
+            _.intersection(qualities, ['highres', 'hd1080', 'hd720']);
+
+        this.config.hasHDQualities =
+            this.config.availableHDQualities.length > 0;
+
+        this.config.availableLDQualities =
+             _.intersection(qualities, ['large', 'medium', 'small']);
+
+        this.trigger('videoQualityControl.qualitiesAreAvailable');
+    }
+
     function onPause() {
         this.videoPlayer.log(
             'pause_video',
@@ -645,6 +661,10 @@ function (HTML5Video, Resizer) {
                 this.videoPlayer.onUnstarted();
                 break;
             case this.videoPlayer.PlayerState.PLAYING:
+                if (this.config.availableLDQualities.length === 0 &&
+                    this.config.availableHDQualities.length === 0) {
+                    this.videoPlayer.onFetchAvailableQualities();
+                }
                 this.videoPlayer.onPlay();
                 break;
             case this.videoPlayer.PlayerState.PAUSED:

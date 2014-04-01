@@ -520,7 +520,11 @@ function (VideoPlayer, VideoStorage) {
             element: element,
             fadeOutTimeout:     1400,
             captionsFreezeTime: 10000,
-            availableQualities: ['hd720', 'hd1080', 'highres']
+            // Available LD and HD qualities will only be accessible once the
+            // video has been played once, via player.getAvailableQualityLevels.
+            availableLDQualities: [],
+            availableHDQualities: [],
+            hasHDQualities: false
         });
 
         if (this.config.endTime < this.config.startTime) {
